@@ -1,0 +1,4 @@
+apply from: 'gradle/helpers.gradle'
+apply from: 'gradle/dependency-versions.gradle'
+apply from: 'gradle/java.gradle'
+apply from: 'gradle/checkstyle.gradle'

@@ -1,0 +1,29 @@
+Project actionsRootProject = project
+
+subprojects {
+    String projectRelativePath = project.path.substring(actionsRootProject.path.length())
+    if (projectRelativePath.matches(/:[^:]+/)) { // base
+        // do nothing
+
+    } else if (projectRelativePath.matches(/:[^:]+:(common|v\d+)/)) { // common or version
+        apply plugin: 'java'
+
+        dependencies {
+            implementation project(':common:utils')
+            implementation project(':common:logging')
+        }
+
+
+        if (projectRelativePath.endsWith(':common')) { // common
+            apply plugin: 'java-library'
+
+
+        } else { // version
+
+
+        }
+
+    } else {
+        throw new GradleException("Invalid project relative path: $projectRelativePath")
+    }
+}

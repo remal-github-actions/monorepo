@@ -1,0 +1,9 @@
+rootProject.name = 'monorepo'
+
+include(
+    ':actions:retrieve-repository-info:v1',
+    ':common:annotations',
+    ':common:utils',
+    ':common:logging',
+    ':common:github-client',
+)

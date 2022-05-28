@@ -1,0 +1,45 @@
+allprojects {
+    pluginManager.withPlugin('java') {
+        apply plugin: 'checkstyle'
+    }
+
+    pluginManager.withPlugin('checkstyle') {
+        afterEvaluate {
+            if (repositories.isEmpty()) {
+                repositories { mavenCentral() }
+            }
+        }
+
+        dependencies {
+            checkstyle 'com.puppycrawl.tools:checkstyle:10.2'
+        }
+
+        checkstyle {
+            ignoreFailures = false
+
+            // `checkstyle.xml` location:
+            if (rootProject.name == 'buildSrc') {
+                configFile = rootProject.file('../checkstyle.xml')
+            } else {
+                configFile = rootProject.file('checkstyle.xml')
+            }
+
+            toolVersion = project.configurations.checkstyle
+                .allDependencies
+                .matching { it.group == 'com.puppycrawl.tools' && it.name == 'checkstyle' }
+                .matching { it.version != null && !it.version.isEmpty() }
+                .first()
+                .version
+        }
+
+        tasks.withType(Checkstyle).configureEach { Checkstyle task ->
+            task.group = 'verification'
+        }
+    }
+
+
+    tasks.register('allCheckstyle') {
+        dependsOn(project.tasks.withType(Checkstyle))
+        group = 'verification'
+    }
+}

@@ -1,0 +1,162 @@
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.ConcurrentMap
+import org.gradle.api.internal.tasks.compile.HasCompileOptions
+
+allprojects {
+    pluginManager.withPlugin('java') {
+        java {
+            toolchain {
+                languageVersion = JavaLanguageVersion.of(17)
+            }
+        }
+
+        repositories {
+            mavenCentral()
+        }
+
+        configurations.create('compileOnlyAll') { Configuration conf ->
+            conf.description('Compile-only dependencies for all source-sets')
+            sourceSets.configureEach { SourceSet sourceSet ->
+                configurations[sourceSet.compileOnlyConfigurationName].extendsFrom(conf)
+            }
+            project.allSourceSetsModifiableConfigurations.add(conf)
+        }
+
+        configurations.create('optional') { Configuration conf ->
+            sourceSets.configureEach { SourceSet sourceSet ->
+                conf.description('Optional dependencies')
+                if (sourceSet.name == SourceSet.MAIN_SOURCE_SET_NAME) {
+                    configurations[sourceSet.compileOnlyConfigurationName].extendsFrom(conf)
+                } else {
+                    configurations[sourceSet.implementationConfigurationName].extendsFrom(conf)
+                }
+            }
+            project.allSourceSetsModifiableConfigurations.add(conf)
+        }
+
+        configurations.create('apt') { Configuration conf ->
+            conf.description('Annotation processors and compile-only dependencies for all source-sets')
+            sourceSets.configureEach { SourceSet sourceSet ->
+                configurations[sourceSet.annotationProcessorConfigurationName].extendsFrom(conf)
+                configurations[sourceSet.compileOnlyConfigurationName].extendsFrom(conf)
+            }
+            project.allSourceSetsModifiableConfigurations.add(conf)
+        }
+
+        configurations.create('annotationProcessorAll') { Configuration conf ->
+            conf.description('Annotation processors for all source-sets')
+            sourceSets.configureEach { SourceSet sourceSet ->
+                configurations[sourceSet.annotationProcessorConfigurationName].extendsFrom(conf)
+            }
+            project.allSourceSetsModifiableConfigurations.add(conf)
+        }
+
+        dependencies {
+            compileOnlyAll 'com.google.auto.service:auto-service-annotations'
+            annotationProcessorAll 'com.google.auto.service:auto-service'
+
+            testImplementation 'org.junit.jupiter:junit-jupiter-api'
+            testImplementation 'org.junit.jupiter:junit-jupiter-params'
+            testImplementation 'org.mockito:mockito-junit-jupiter'
+            testImplementation 'org.mockito:mockito-inline'
+
+            testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine'
+        }
+
+        configurations.create('lombok') { Configuration conf ->
+            conf.description('Lombok')
+            sourceSets.configureEach { SourceSet sourceSet ->
+                configurations[sourceSet.compileOnlyConfigurationName].extendsFrom(conf)
+                sourceSet.annotationProcessorPath += configurations.lombok
+            }
+            project.allSourceSetsModifiableConfigurations.add(conf)
+        }
+        dependencies {
+            lombok 'org.projectlombok:lombok'
+        }
+
+        if (rootProject.name != 'buildSrc') {
+            ':common:annotations'.with { annotationsPath ->
+                if (project.path != annotationsPath) {
+                    dependencies {
+                        compileOnlyAll project(annotationsPath)
+                    }
+                }
+            }
+        }
+
+        sourceSets.configureEach { SourceSet sourceSet ->
+            configurations[sourceSet.compileClasspathConfigurationName].attributes { attrs ->
+                attrs.attribute(
+                    LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE,
+                    objects.named(LibraryElements, LibraryElements.JAR)
+                )
+            }
+            configurations[sourceSet.runtimeClasspathConfigurationName].attributes { attrs ->
+                attrs.attribute(
+                    LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE,
+                    objects.named(LibraryElements, LibraryElements.JAR)
+                )
+            }
+        }
+
+        tasks.matching({ it instanceof HasCompileOptions }).configureEach { HasCompileOptions task ->
+            task.options.with {
+                it.fork = false
+                it.encoding = 'UTF-8'
+                // Produce deprecation warnings:
+                it.deprecation = true
+                it.compilerArgs.addAll(
+                    [
+                        // !!! DO NOT DISABLE THIS !!! Store parameter names into bytecode:
+                        '-parameters',
+
+                        // Fail on any warning:
+                        '-Werror',
+                        // Linting settings:
+                        '-Xlint:all',
+                        '-Xlint:-rawtypes',
+                        '-Xlint:-serial',
+                        '-Xlint:-processing',
+                    ]
+                )
+            }
+        }
+
+        tasks.withType(Test) {
+            useJUnitPlatform()
+            systemProperty('junit.jupiter.extensions.autodetection.enabled', 'true')
+            enableAssertions = true
+            maxParallelForks = 1
+            testLogging {
+                showExceptions = true
+                showCauses = true
+                showStackTraces = true
+                exceptionFormat = 'FULL'
+                stackTraceFilters('GROOVY')
+                events('FAILED')
+            }
+
+            Set<Object> testsWithStdErr = Collections.newSetFromMap(new ConcurrentHashMap<>())
+            ConcurrentMap<Object, List<String>> testsMessages = new ConcurrentHashMap<>()
+            onOutput { TestDescriptor descr, TestOutputEvent event ->
+                if (event.destination.name() == 'StdErr') {
+                    testsWithStdErr.add(descr.id)
+                }
+
+                List<String> testMessages = testsMessages.computeIfAbsent(descr.id, { new ArrayList<>() })
+                testMessages.add(event.getMessage())
+            }
+            afterTest { TestDescriptor descr, TestResult result ->
+                if (result.resultType.name() == 'FAILURE' || testsWithStdErr.contains(descr.id)) {
+                    List<String> testMessages = testsMessages.get(descr.id)
+                    if (testMessages != null) {
+                        project.logger.error('')
+                        project.logger.error("Output of $descr.className > $descr.displayName:")
+                        testMessages.forEach { project.logger.error(" > $it") }
+                    }
+                }
+            }
+        }
+    }
+}

@@ -1,0 +1,10 @@
+plugins {
+    id 'java-library'
+}
+
+dependencies {
+    api 'org.jetbrains:annotations'
+    api 'com.google.code.findbugs:jsr305'
+    api 'com.github.spotbugs:spotbugs-annotations'
+    api('com.infradna.tool:bridge-method-annotation') { transitive = false }
+}

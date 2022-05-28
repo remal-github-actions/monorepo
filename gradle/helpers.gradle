@@ -1,0 +1,142 @@
+import static java.util.Collections.synchronizedSet
+
+import java.lang.reflect.Method
+import java.lang.reflect.Modifier
+
+allprojects {
+    project.ext.disableTask = { Task task ->
+        task.enabled = false
+        task.onlyIf { false }
+        task.dependsOn = []
+        Iterator registeredFileProperties = task.inputs.registeredFileProperties.iterator()
+        while (registeredFileProperties.hasNext()) {
+            registeredFileProperties.next()
+            registeredFileProperties.remove()
+        }
+    }
+
+    project.ext.disableSourceSet = { SourceSet sourceSet ->
+        project.afterEvaluate {
+            sourceSet.compileClasspath = project.files()
+            sourceSet.runtimeClasspath = project.files()
+
+            Collection<String> configurationNames = project.getSourceSetConfigurationNames(sourceSet)
+            project.configurations
+                .matching { configurationNames.contains(it.name) }
+                .configureEach { Configuration conf ->
+                    conf.extendsFrom = []
+                    conf.dependencies.clear()
+                    conf.dependencyConstraints.clear()
+                }
+        }
+
+        Set<String> taskNames = (project.getSourceSetTaskNames(sourceSet) + [
+            sourceSet.getCompileTaskName('java'),
+            sourceSet.getCompileTaskName('groovy'),
+            sourceSet.getCompileTaskName('kotlin'),
+            sourceSet.getTaskName('checkstyle', null),
+            sourceSet.getTaskName('test', null),
+            sourceSet.name == 'test' ? 'test' : null
+        ]).findAll { it != null }.toSet()
+        project.tasks.matching { taskNames.contains(it.name) }.all { disableTask(it) }
+    }
+
+    project.ext.areTestsDisabled = false
+    project.ext.disableTests = {
+        project.ext.areTestsDisabled = true
+        project.pluginManager.withPlugin('java') {
+            project.disableSourceSet(sourceSets.test)
+        }
+        project.pluginManager.withPlugin('name.remal.test-source-sets') {
+            project.testSourceSets.all { project.disableSourceSet(it) }
+        }
+    }
+
+
+    List<Method> sourceSetGetConfigurationNameMethods = SourceSet.getMethods().findAll {
+        return it.name.startsWith('get')
+            && it.name.endsWith('ConfigurationName')
+            && it.returnType == String
+            && it.parameterCount == 0
+            && !Modifier.isStatic(it.modifiers)
+    }
+    project.ext.getSourceSetConfigurationNames = { SourceSet sourceSet ->
+        return sourceSetGetConfigurationNameMethods.collect { it.invoke(sourceSet) }
+            .findAll { it != null }
+            .toSet()
+    }
+    project.ext.getSourceSetReadonlyConfigurationNames = { SourceSet sourceSet ->
+        return [
+            sourceSet.apiElementsConfigurationName,
+            sourceSet.runtimeElementsConfigurationName,
+            sourceSet.compileClasspathConfigurationName,
+            sourceSet.runtimeClasspathConfigurationName,
+        ].toSet()
+    }
+
+    project.ext.allSourceSetsConfigurations = project.container(Configuration)
+    project.ext.allSourceSetsModifiableConfigurations = project.container(Configuration)
+    pluginManager.withPlugin('java') {
+        project.sourceSets.configureEach { SourceSet sourceSet ->
+            Collection<String> configurationNames = project.getSourceSetConfigurationNames(sourceSet)
+            DomainObjectCollection<Configuration> sourceSetsConfigurations = project.configurations.matching { configurationNames.contains(it.name) }
+            sourceSetsConfigurations.all { project.allSourceSetsConfigurations.add(it) }
+            sourceSetsConfigurations.whenObjectRemoved { project.allSourceSetsConfigurations.remove(it) }
+
+            Collection<String> readonlyConfigurationNames = project.getSourceSetReadonlyConfigurationNames(sourceSet)
+            DomainObjectCollection<Configuration> sourceSetsModifiableConfigurations = sourceSetsConfigurations.matching { !readonlyConfigurationNames.contains(it.name) }
+            sourceSetsModifiableConfigurations.all { project.allSourceSetsModifiableConfigurations.add(it) }
+            sourceSetsModifiableConfigurations.whenObjectRemoved { project.allSourceSetsModifiableConfigurations.remove(it) }
+        }
+    }
+
+    project.ext.registerSourceSetsBomConstraints = { String bomDependencyNotation ->
+        project.allSourceSetsModifiableConfigurations.all { Configuration conf ->
+            Dependency bomDependency = project.dependencies.platform(bomDependencyNotation)
+            conf.dependencies.add(bomDependency)
+        }
+    }
+
+    Set<String> registeredSourceSetsConstraintNotations = synchronizedSet(new LinkedHashSet<>())
+    project.ext.registerSourceSetsConstraint = { String constraintNotation ->
+        registeredSourceSetsConstraintNotations.add(constraintNotation)
+        project.allSourceSetsModifiableConfigurations.all { Configuration conf ->
+            DependencyConstraint dependencyConstraint = project.dependencies.constraints.create(constraintNotation) { DependencyConstraint constraint ->
+                constraint.version {
+                    it.strictly(constraint.version)
+                }
+            }
+            conf.dependencyConstraints.add(dependencyConstraint)
+        }
+    }
+
+    project.ext.replaceModule = { String from, String to, String because = null, int majorVersion = -1 ->
+        because = because ?: "$from -> $to"
+        project.allSourceSetsConfigurations.all { Configuration conf ->
+            conf.resolutionStrategy.eachDependency { DependencyResolveDetails details ->
+                if (majorVersion >= 0) {
+                    String majorVersionString = majorVersion.toString()
+                    String requestedVersion = details.requested.version
+                    if (requestedVersion != null
+                        && !(requestedVersion == majorVersionString || requestedVersion.startsWith("${majorVersionString}."))
+                    ) {
+                        return
+                    }
+                }
+
+                if ("${details.requested.group}:${details.requested.name}" == from) {
+                    if (to.count(":") == 1) {
+                        String constraint = registeredSourceSetsConstraintNotations.find { it.startsWith("$to:") }
+                        if (constraint != null) {
+                            details.because(because).useTarget(constraint)
+                        } else {
+                            details.because(because).useTarget("${to}:${details.requested.version}")
+                        }
+                    } else {
+                        details.because(because).useTarget(to)
+                    }
+                }
+            }
+        }
+    }
+}
