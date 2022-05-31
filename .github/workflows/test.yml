@@ -14,4 +14,4 @@ jobs:
     - run: |
         echo ::debug::debug
         echo ::warning::warning
-        echo ::error::error
+        echo -e "::error::error\n1"
