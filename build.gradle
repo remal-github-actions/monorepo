@@ -1,4 +1,47 @@
+plugins {
+    id 'org.jetbrains.gradle.plugin.idea-ext' version '1.1.4'
+}
+
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
 apply from: 'gradle/helpers.gradle'
 apply from: 'gradle/dependency-versions.gradle'
 apply from: 'gradle/java.gradle'
 apply from: 'gradle/checkstyle.gradle'
+apply from: 'gradle/environment.gradle'
+
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
+idea.project.settings {
+    delegateActions {
+        delegateBuildRunToGradle = true
+        testRunner = 'GRADLE'
+    }
+
+    runConfigurations {
+        //noinspection UnnecessaryQualifiedReference
+        defaults(org.jetbrains.gradle.ext.Application) {
+            jvmArgs = '-Djansi.passthrough=true'
+            shortenCommandLine = 'ARGS_FILE'
+        }
+        //noinspection UnnecessaryQualifiedReference
+        defaults(org.jetbrains.gradle.ext.JarApplication) {
+            jvmArgs = '-Djansi.passthrough=true'
+        }
+        //noinspection UnnecessaryQualifiedReference
+        defaults(org.jetbrains.gradle.ext.JUnit) {
+            vmParameters = '-Djansi.passthrough=true'
+            shortenCommandLine = 'ARGS_FILE'
+        }
+        //noinspection UnnecessaryQualifiedReference
+        defaults(org.jetbrains.gradle.ext.TestNG) {
+            vmParameters = '-Djansi.passthrough=true'
+            shortenCommandLine = 'ARGS_FILE'
+        }
+        //noinspection UnnecessaryQualifiedReference
+        defaults(org.jetbrains.gradle.ext.Gradle) {
+            jvmArgs = '-Djansi.passthrough=true'
+        }
+    }
+}
+

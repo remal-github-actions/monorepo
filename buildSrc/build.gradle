@@ -1,8 +1,194 @@
+import org.jsoup.Jsoup
+import org.jsoup.nodes.Document
+import org.jsoup.select.Elements
+
+buildscript {
+    dependencies {
+        classpath 'org.jsoup:jsoup:1.15.1'
+        classpath 'com.google.guava:guava:31.1-jre'
+    }
+    repositories {
+        gradlePluginPortal()
+        mavenCentral()
+    }
+}
+
+plugins {
+    id 'de.undercouch.download' version '5.1.0'
+}
+
 apply from: '../gradle/helpers.gradle'
 apply from: '../gradle/dependency-versions.gradle'
 apply from: '../gradle/java.gradle'
 apply from: '../gradle/checkstyle.gradle'
 
 dependencies {
-    api 'org.jsoup:jsoup'
+    api 'com.google.guava:guava'
+    api 'kr.motd.maven:os-maven-plugin'
 }
+
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
+String gitHubActionsEnvVarDocLocation = 'https://docs.github.com/en/actions/learn-github-actions/environment-variables'
+File gitHubActionsEnvVarDocFile = file("${project.buildDir}/downloaded/github/environment-variables.html")
+TaskProvider downloadGitHubActionsEnvVarDoc = tasks.register('downloadGitHubActionsEnvVarDoc', Download) {
+    src(gitHubActionsEnvVarDocLocation)
+    dest(gitHubActionsEnvVarDocFile)
+    overwrite(false)
+}
+
+TaskProvider generateGitHubActionsEnvVarsClass = tasks.register('generateGitHubActionsEnvVarsClass') { Task task ->
+    task.dependsOn(downloadGitHubActionsEnvVarDoc)
+    task.inputs.file(gitHubActionsEnvVarDocFile).withPropertyName('inputFile')
+
+    File outputDir = project.file("${project.buildDir}/generated/sources/${task.name}")
+    task.outputs.dir(outputDir).withPropertyName('outputDir')
+    project.sourceSets.main.java.srcDir(outputDir)
+
+    task.doFirst {
+        outputDir.deleteDir()
+        outputDir.mkdirs()
+    }
+
+    doLast {
+        Document doc = Jsoup.parse(gitHubActionsEnvVarDocFile, 'UTF-8', gitHubActionsEnvVarDocLocation)
+        Elements table = doc.select(
+            [
+                '#default-environment-variables ~ table',
+            ].join(', ')
+        )
+        Elements trs = table.select('>tbody>tr')
+        if (trs.isEmpty()) throw new IllegalStateException("No TRs were parsed from $gitLabCIEnvVarDocFile")
+
+        doc.select('a[href]').forEach { it.attr('href', it.absUrl('href')) }
+
+        Map<String, String> gitHubActionsEnvVars = new TreeMap<>()
+        trs.forEach { tr ->
+            String variable = tr.select('>td').first().text().trim()
+            String documentation = tr.select('>td').last().html()
+                .replace('\r\n', '\n')
+                .replace('\n\r', '\n')
+                .replace('\r', '\n')
+            gitHubActionsEnvVars.put(variable, documentation)
+        }
+
+        [
+            'GITHUB_ACTION',
+            'GITHUB_ACTION_PATH',
+            'GITHUB_API_URL',
+            'GITHUB_WORKSPACE',
+            'RUNNER_ARCH',
+            'RUNNER_TEMP',
+            'RUNNER_TOOL_CACHE',
+        ].forEach { variable ->
+            if (!gitHubActionsEnvVars.containsKey(variable)) {
+                throw new IllegalStateException("'$variable' can't be found in downloaded document")
+            }
+        }
+
+        gitHubActionsEnvVars.put('ACTIONS_RUNNER_DEBUG', '<code>true</code> if runner diagnostic logging is enabled for this workflow run.')
+        gitHubActionsEnvVars.put('ACTIONS_STEP_DEBUG', '<code>true</code> if step debug logging is enabled for this workflow run.')
+
+
+        Set<String> booleanEnvVars = [
+            'CI',
+            'ACTIONS_RUNNER_DEBUG',
+            'ACTIONS_STEP_DEBUG',
+            'GITHUB_ACTIONS',
+            'GITHUB_REF_PROTECTED',
+        ].toSet()
+
+        Set<String> integerEnvVars = [
+            'GITHUB_RETENTION_DAYS',
+            'GITHUB_RUN_ATTEMPT',
+        ].toSet()
+
+        Set<String> longEnvVars = [
+            'GITHUB_RUN_ID',
+            'GITHUB_RUN_NUMBER',
+        ].toSet()
+
+        Set<String> pathEnvVars = [
+            'GITHUB_ACTION_PATH',
+            'GITHUB_ENV',
+            'GITHUB_EVENT_PATH',
+            'GITHUB_PATH',
+            'GITHUB_STEP_SUMMARY',
+            'GITHUB_WORKSPACE',
+            'RUNNER_TEMP',
+            'RUNNER_TOOL_CACHE',
+        ].toSet()
+
+        Set<String> urlEnvVars = [
+            'GITHUB_API_URL',
+            'GITHUB_SERVER_URL',
+        ].toSet()
+
+        Set<String> optionalEnvVars = [
+            'GITHUB_ACTION_PATH',
+            'GITHUB_ACTION_REPOSITORY',
+            'GITHUB_BASE_REF',
+            'GITHUB_REF',
+            'GITHUB_REF_NAME',
+            'GITHUB_REF_TYPE',
+            'GITHUB_SHA',
+        ].toSet()
+        optionalEnvVars.addAll(booleanEnvVars)
+
+        String packageName = 'build'
+        String classSimpleName = 'GitHubActionsEnvVars'
+        File outputFile = project.file("${outputDir}/${packageName.replace('.', '/')}/${classSimpleName}.java")
+        outputFile.parentFile.mkdirs()
+        outputFile.setText(
+            (
+                [
+                    "package ${packageName};",
+                    "",
+                    "import static lombok.AccessLevel.PRIVATE;",
+                    "",
+                    "import java.nio.file.Path;",
+                    "import java.net.URL;",
+                    "import java.util.ArrayList;",
+                    "import java.util.List;",
+                    "import javax.annotation.processing.Generated;",
+                    "import lombok.NoArgsConstructor;",
+                    "import lombok.val;",
+                    "",
+                    "@NoArgsConstructor(access = PRIVATE)",
+                    "@Generated(\"${rootProject.name}/${rootProject.relativePath(project.buildFile).replace('\\', '/')}\")",
+                    "public abstract class ${classSimpleName} {",
+                    "",
+                    "    public static final String GITHUB_ACTIONS_ENV_VARS_DOC_LOCATION = \"$gitHubActionsEnvVarDocLocation\";",
+                    "",
+                    "    public static final List<GitHubActionsEnvVar> GITHUB_ACTIONS_ENV_VARS;",
+                    "",
+                    "    static {",
+                    "        val gitHubActionsEnvVars = new ArrayList<GitHubActionsEnvVar>();",
+                ]
+                    + gitHubActionsEnvVars.entrySet().collect { entry ->
+                    [
+                        "        gitHubActionsEnvVars.add(GitHubActionsEnvVar.builder()",
+                        "            .name(\"${entry.key}\")",
+                        "            .descHtml(\"${entry.value.replace('\\', '\\\\').replace('"', '\\"').replace('\n', '\\n')}\")",
+                        booleanEnvVars.contains(entry.key) ? "            .optionalType(Boolean.class)" : null,
+                        integerEnvVars.contains(entry.key) ? "            .optionalType(Integer.class)" : null,
+                        pathEnvVars.contains(entry.key) ? "            .optionalType(Path.class)" : null,
+                        urlEnvVars.contains(entry.key) ? "            .optionalType(URL.class)" : null,
+                        optionalEnvVars.contains(entry.key) ? "            .optional(true)" : null,
+                        "            .build()",
+                        "        );",
+                    ]
+                }.flatten().findAll { it != null }
+                    + [
+                    "        GITHUB_ACTIONS_ENV_VARS = List.copyOf(gitHubActionsEnvVars);",
+                    "    }",
+                    "",
+                    "}",
+                    "",
+                ]
+            ).join('\n'), 'UTF-8'
+        )
+    }
+}
+
+tasks.named('compileJava') { dependsOn(generateGitHubActionsEnvVarsClass) }

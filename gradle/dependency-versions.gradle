@@ -19,15 +19,33 @@ List<String> dependencyConstraints = [
     "com.google.auto.service:auto-service-annotations:$autoServiceVersion",
 
     'org.kohsuke:github-api:1.306',
+    'com.google.guava:guava:31.1-jre',
+    'org.fusesource.jansi:jansi:2.4.0',
+    'com.squareup:javapoet:1.13.0',
 
-
-    'org.jsoup:jsoup:1.15.1'
+    'kr.motd.maven:os-maven-plugin:1.7.0',
 ]
 
 allprojects {
     pluginManager.withPlugin('java') {
         dependencyPlatforms.forEach { project.registerSourceSetsBomConstraints(it) }
         dependencyConstraints.forEach { project.registerSourceSetsConstraint(it) }
+
+        project.allSourceSetsModifiableConfigurations.all { Configuration conf ->
+            conf.dependencies.withType(ExternalModuleDependency).all { ExternalModuleDependency dep ->
+                if ("${dep.group}:${dep.name}" == 'com.google.guava:guava'
+                    || "${dep.group}:${dep.name}" == 'com.google.auto.service:auto-service'
+                ) {
+                    dep.exclude group: 'com.google.code.findbugs'
+                    dep.exclude group: 'com.google.errorprone'
+                    dep.exclude group: 'com.google.j2objc'
+                    dep.exclude group: 'org.checkerframework'
+
+                } else if ("${dep.group}:${dep.name}" == 'kr.motd.maven:os-maven-plugin') {
+                    dep.transitive = false
+                }
+            }
+        }
 
         project.replaceModule('junit:junit', 'io.quarkus:quarkus-junit4-mock', 'don\'t use JUnit4')
     }

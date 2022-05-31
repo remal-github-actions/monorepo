@@ -79,7 +79,7 @@ allprojects {
             ':common:annotations'.with { annotationsPath ->
                 if (project.path != annotationsPath) {
                     dependencies {
-                        compileOnlyAll project(annotationsPath)
+                        apt project(annotationsPath)
                     }
                 }
             }
@@ -126,8 +126,10 @@ allprojects {
         tasks.withType(Test) {
             useJUnitPlatform()
             systemProperty('junit.jupiter.extensions.autodetection.enabled', 'true')
+
             enableAssertions = true
             maxParallelForks = 1
+
             testLogging {
                 showExceptions = true
                 showCauses = true

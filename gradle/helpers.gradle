@@ -4,6 +4,15 @@ import java.lang.reflect.Method
 import java.lang.reflect.Modifier
 
 allprojects {
+    project.ext.getLocalProperty = { String propertyName, String fallbackEnvironmentVariableName = null ->
+        String rootProjectName = 'remal-github-actions'
+        return (System.getProperty(propertyName))
+            ?: (project.findProperty(propertyName)?.toString())
+            ?: (System.getProperty("${rootProjectName}.${propertyName}"))
+            ?: (project.findProperty("${rootProjectName}.${propertyName}")?.toString())
+            ?: (fallbackEnvironmentVariableName?.with { System.getenv(it) })
+    }
+
     project.ext.disableTask = { Task task ->
         task.enabled = false
         task.onlyIf { false }

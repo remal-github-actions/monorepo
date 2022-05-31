@@ -1,0 +1,120 @@
+import java.nio.file.Path
+import java.util.concurrent.Callable
+import java.util.concurrent.ThreadLocalRandom
+import kr.motd.maven.os.Detector
+
+allprojects {
+    tasks.matching({ it instanceof JavaForkOptions }).configureEach { Task task ->
+        task.doFirst {
+            if (rootProject.name != 'buildSrc') {
+                //noinspection UnnecessaryQualifiedReference
+                build.GitHubActionsEnvVars.GITHUB_ACTIONS_ENV_VARS.collect { it.name }.forEach { String envVar ->
+                    project.getLocalProperty(envVar)?.with { task.environment(envVar, it) }
+                }
+            }
+
+
+            long runId = ThreadLocalRandom.current().nextLong(0L, Long.MAX_VALUE)
+            File environmentTemporaryDir = new File(task.temporaryDir, ".github-environment/$runId")
+            environmentTemporaryDir.parentFile.deleteDir()
+
+            Closure<Closure<File>> fileProvider = name -> {
+                return {
+                    File file = new File(environmentTemporaryDir, name).absoluteFile
+                    file.parentFile.mkdirs()
+                    file.createNewFile()
+                    return file
+                }
+            }
+
+            Closure<Closure<File>> dirProvider = name -> {
+                return {
+                    File file = new File(environmentTemporaryDir, name).absoluteFile
+                    file.mkdirs()
+                    return file
+                }
+            }
+
+            Closure<Properties> getOsProperties = {
+                Detector osDetector = new Detector() {
+                    @Override
+                    protected void log(String message) {
+                        task.logger.debug(message)
+                    }
+
+                    @Override
+                    protected void logProperty(String name, String value) {
+                        task.logger.debug('{}={}', name, value)
+                    }
+                }
+
+                Properties result = new Properties()
+                //noinspection GroovyAccessibility
+                osDetector.detect(result, [])
+                return result
+            }.memoize()
+
+            Closure<String> archProvider = {
+                Properties props = getOsProperties()
+                String arch = props.getProperty(Detector.DETECTED_ARCH) ?: 'unknown'
+                if (arch == 'x86_64') {
+                    return 'X64'
+                } else if (arch == 'aarch_64') {
+                    return 'ARM64'
+                }
+                arch = arch.replaceFirst(/_32$/, '')
+                arch = arch.replace('_', '')
+                return arch.toUpperCase()
+            }
+
+            Closure<String> osProvider = {
+                Properties props = getOsProperties()
+                String os = props.getProperty(Detector.DETECTED_NAME) ?: 'unknown'
+                if (os == 'osx') {
+                    return 'macOS'
+                }
+                return os.capitalize()
+            }
+
+            ; [
+                'CI'                     : true,
+                'GITHUB_ACTION'          : task.name,
+                'GITHUB_ACTIONS'         : true,
+                'GITHUB_ACTOR'           : 'remal-github-actions',
+                'GITHUB_API_URL'         : 'https://api.github.com',
+                'GITHUB_ENV'             : fileProvider('GITHUB_ENV'),
+                'GITHUB_EVENT_NAME'      : 'workflow_dispatch',
+                'GITHUB_EVENT_PATH'      : fileProvider('GITHUB_EVENT'),
+                'GITHUB_GRAPHQL_URL'     : 'https://api.github.com/graphql',
+                'GITHUB_HEAD_REF'        : 'HEAD',
+                'GITHUB_JOB'             : task.name,
+                'GITHUB_PATH'            : fileProvider('GITHUB_PATH'),
+                'GITHUB_REF'             : 'HEAD',
+                'GITHUB_REPOSITORY'      : 'remal-github-actions/monorepo',
+                'GITHUB_REPOSITORY_OWNER': 'remal-github-actions',
+                'GITHUB_RETENTION_DAYS'  : 7,
+                'GITHUB_RUN_ATTEMPT'     : 1,
+                'GITHUB_RUN_ID'          : runId,
+                'GITHUB_RUN_NUMBER'      : 1,
+                'GITHUB_SERVER_URL'      : 'https://github.com',
+                'GITHUB_STEP_SUMMARY'    : fileProvider('GITHUB_STEP_SUMMARY'),
+                'GITHUB_WORKFLOW'        : 'local-gradle',
+                'GITHUB_WORKSPACE'       : dirProvider('GITHUB_WORKSPACE'),
+                'RUNNER_ARCH'            : archProvider,
+                'RUNNER_NAME'            : 'local-gradle',
+                'RUNNER_OS'              : osProvider,
+                'RUNNER_TEMP'            : dirProvider('RUNNER_TEMP'),
+                'RUNNER_TOOL_CACHE'      : dirProvider('RUNNER_TOOL_CACHE'),
+            ].forEach { name, value ->
+                if (task.environment[name] != null) return
+                if (value instanceof Callable) value = value.call()
+                if (value instanceof Provider) value = value.getOrNull()
+                if (value instanceof Path) value = value.toAbsolutePath().normalize().toFile()
+                if (value instanceof File) value = value.absolutePath
+                if (value == null) return
+                value = value.toString()
+                task.environment(name, value)
+            }
+        }
+    }
+}

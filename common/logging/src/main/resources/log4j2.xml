@@ -6,9 +6,9 @@
   strict="true"
 >
   <Appenders>
-    <Console name="Console" target="SYSTEM_OUT">
+    <Console name="Console">
       <!--PatternLayout pattern="%d{YYYY-MM-dd HH:mm:ss.SSS} [%t] %-5level %logger - %msg%n"/-->
-      <PatternLayout pattern="%msg%n"/>
+      <PatternLayout pattern="%-5level: %logger - %msg%n"/>
     </Console>
   </Appenders>
   <Loggers>

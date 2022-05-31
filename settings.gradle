@@ -5,5 +5,7 @@ include(
     ':common:annotations',
     ':common:utils',
     ':common:logging',
+    ':common:lifecycle',
+    ':common:lifecycle-processor',
     ':common:github-client',
 )

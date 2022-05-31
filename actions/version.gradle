@@ -1,0 +1,5 @@
+apply from: "${actionsRootProject.projectDir}/common.gradle"
+
+dependencies {
+    annotationProcessorAll project(':common:lifecycle-processor')
+}

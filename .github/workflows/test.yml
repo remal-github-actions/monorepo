@@ -1,0 +1,17 @@
+name: 'Test'
+
+on:
+  push:
+    branches:
+    - '**'
+  workflow_dispatch: { }
+
+jobs:
+  codeowners-validation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+    - run: |
+      echo ::debug::debug
+      echo ::warning::warning
+      echo ::error::error

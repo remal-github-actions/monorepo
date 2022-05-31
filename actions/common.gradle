@@ -1,0 +1,8 @@
+apply plugin: 'java'
+
+dependencies {
+    compileOnlyAll project(':common:lifecycle')
+
+    implementation project(':common:utils')
+    implementation project(':common:logging')
+}

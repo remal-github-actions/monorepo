@@ -1,29 +1,17 @@
-import org.jsoup.Jsoup
-import org.jsoup.nodes.Document
-import org.jsoup.select.Elements
+import static build.GitHubActionsEnvVars.GITHUB_ACTIONS_ENV_VARS
+import static build.GitHubActionsEnvVars.GITHUB_ACTIONS_ENV_VARS_DOC_LOCATION
+
+import java.nio.file.Path
 
 plugins {
     id 'java-library'
-    id 'de.undercouch.download' version '5.1.0'
 }
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-String gitHubActionsEnvVarDocLocation = 'https://docs.github.com/en/actions/learn-github-actions/environment-variables'
-File gitHubActionsEnvVarDocFile = file("${project.buildDir}/downloaded/github/environment-variables.html")
-TaskProvider downloadGitHubActionsEnvVarDoc = tasks.register('downloadGitHubActionsEnvVarDoc', Download) {
-    src(gitHubActionsEnvVarDocLocation)
-    dest(gitHubActionsEnvVarDocFile)
-    overwrite(false)
-}
-
 TaskProvider generateEnvironmentClass = tasks.register('generateEnvironmentClass') { Task task ->
-    task.dependsOn(downloadGitHubActionsEnvVarDoc)
-
     File outputDir = project.file("${project.buildDir}/generated/sources/${task.name}")
-    task.inputs.file(gitHubActionsEnvVarDocFile).withPropertyName('inputFile')
     task.outputs.dir(outputDir).withPropertyName('outputDir')
-
     project.sourceSets.main.java.srcDir(outputDir)
 
     task.doFirst {
@@ -32,87 +20,6 @@ TaskProvider generateEnvironmentClass = tasks.register('generateEnvironmentClass
     }
 
     task.doLast {
-        Document doc = Jsoup.parse(gitHubActionsEnvVarDocFile, 'UTF-8', gitHubActionsEnvVarDocLocation)
-        Elements table = doc.select(
-            [
-                '#default-environment-variables ~ table',
-            ].join(', ')
-        )
-        if (table == null) throw new IllegalStateException("No table was parsed from $gitLabCIEnvVarDocFile")
-        Elements trs = table.select('>tbody>tr')
-        if (trs.isEmpty()) throw new IllegalStateException("No TRs were parsed from $gitLabCIEnvVarDocFile")
-
-        doc.select('a[href]').forEach { it.attr('href', it.absUrl('href')) }
-
-        Map<String, String> gitHubActionsEnvVars = new TreeMap<>()
-        trs.forEach { tr ->
-            String variable = tr.select('>td').first().text().trim()
-            String documentation = tr.select('>td').last().html()
-            gitHubActionsEnvVars.put(variable, documentation)
-        }
-
-        [
-            'GITHUB_ACTION',
-            'GITHUB_ACTION_PATH',
-            'GITHUB_API_URL',
-            'GITHUB_WORKSPACE',
-            'RUNNER_ARCH',
-            'RUNNER_TEMP',
-            'RUNNER_TOOL_CACHE',
-        ].forEach { variable ->
-            if (!gitHubActionsEnvVars.containsKey(variable)) {
-                throw new IllegalStateException("'$variable' can't be found in downloaded document")
-            }
-        }
-
-        gitHubActionsEnvVars.remove('CI')
-
-        gitHubActionsEnvVars.put('ACTIONS_RUNNER_DEBUG', '<code>true</code> if runner diagnostic logging is enabled for this workflow run.')
-        gitHubActionsEnvVars.put('ACTIONS_STEP_DEBUG', '<code>true</code> if step debug logging is enabled for this workflow run.')
-
-        Set<String> booleanEnvVars = [
-            'CI',
-            'ACTIONS_RUNNER_DEBUG',
-            'ACTIONS_STEP_DEBUG',
-            'GITHUB_ACTIONS',
-            'GITHUB_REF_PROTECTED',
-        ].toSet()
-
-        Set<String> integerEnvVars = [
-            'GITHUB_RETENTION_DAYS',
-            'GITHUB_RUN_ATTEMPT',
-        ].toSet()
-
-        Set<String> longEnvVars = [
-            'GITHUB_RUN_ID',
-            'GITHUB_RUN_NUMBER',
-        ].toSet()
-
-        Set<String> pathEnvVars = [
-            'GITHUB_ACTION_PATH',
-            'GITHUB_ENV',
-            'GITHUB_EVENT_PATH',
-            'GITHUB_PATH',
-            'GITHUB_STEP_SUMMARY',
-            'GITHUB_WORKSPACE',
-            'RUNNER_TEMP',
-            'RUNNER_TOOL_CACHE',
-        ].toSet()
-
-        Set<String> urlEnvVars = [
-            'GITHUB_API_URL',
-            'GITHUB_SERVER_URL',
-        ].toSet()
-
-        Set<String> optionalEnvVars = [
-            'GITHUB_ACTION_PATH',
-            'GITHUB_BASE_REF',
-            'GITHUB_REF',
-            'GITHUB_REF_NAME',
-            'GITHUB_REF_TYPE',
-            'GITHUB_SHA',
-        ].toSet()
-
         String packageName = 'name.remal.github_actions.utils'
         String classSimpleName = 'Environment'
         File outputFile = project.file("${outputDir}/${packageName.replace('.', '/')}/${classSimpleName}.java")
@@ -122,74 +29,37 @@ TaskProvider generateEnvironmentClass = tasks.register('generateEnvironmentClass
                 [
                     "package ${packageName};",
                     "",
+                    "import static java.util.function.Function.identity;",
                     "import static java.util.function.Predicate.not;",
                     "import static lombok.AccessLevel.PRIVATE;",
                     "",
-                    "import java.nio.file.Path;",
                     "import java.nio.file.Paths;",
                     "import java.net.URL;",
-                    "import java.util.List;",
                     "import java.util.Optional;",
+                    "import java.util.function.Function;",
                     "import javax.annotation.Nullable;",
                     "import javax.annotation.processing.Generated;",
                     "import lombok.NoArgsConstructor;",
                     "import lombok.SneakyThrows;",
                     "",
                     "/**",
-                    " * See <a href=\"$gitHubActionsEnvVarDocLocation\">$gitHubActionsEnvVarDocLocation</a>.",
+                    " * See <a href=\"$GITHUB_ACTIONS_ENV_VARS_DOC_LOCATION\">$GITHUB_ACTIONS_ENV_VARS_DOC_LOCATION</a>.",
                     " */",
                     "@NoArgsConstructor(access = PRIVATE)",
                     "@Generated(\"${rootProject.relativePath(project.buildFile).replace('\\', '/')}\")",
                     "public abstract class ${classSimpleName} {",
                     "",
-                    "    private static Optional<String> getEnv(String var) {",
+                    "    private static <T> T getEnv(String var, Function<String, T> converter, boolean optional, @Nullable T defaultValue) {",
                     "        return Optional.ofNullable(System.getenv(var))",
-                    "            .filter(not(String::isEmpty));",
-                    "    }",
-                    "",
-                    "    private static boolean optionalBooleanVar(String var) {",
-                    "        return getEnv(var)",
-                    "            .map(Boolean::parseBoolean)",
-                    "            .orElse(false);",
-                    "    }",
-                    "",
-                    "    @Nullable",
-                    "    private static Integer optionalIntegerVar(String var) {",
-                    "        return getEnv(var)",
-                    "            .map(Integer::parseInt)",
-                    "            .orElse(null);",
-                    "    }",
-                    "",
-                    "    private static int requiredIntegerVar(String var) {",
-                    "        return getEnv(var)",
-                    "            .map(Integer::parseInt)",
-                    "            .orElseThrow(() -> new IllegalStateException(\"Environment variable \" + var + \" is not set or empty\"));",
-                    "    }",
-                    "",
-                    "    private static Long optionalLongVar(String var) {",
-                    "        return getEnv(var)",
-                    "            .map(Long::parseLong)",
-                    "            .orElse(null);",
-                    "    }",
-                    "",
-                    "    @Nullable",
-                    "    private static long requiredLongVar(String var) {",
-                    "        return getEnv(var)",
-                    "            .map(Long::parseLong)",
-                    "            .orElseThrow(() -> new IllegalStateException(\"Environment variable \" + var + \" is not set or empty\"));",
-                    "    }",
-                    "",
-                    "    @Nullable",
-                    "    private static Path optionalPathVar(String var) {",
-                    "        return getEnv(var)",
-                    "            .map(Paths::get)",
-                    "            .orElse(null);",
-                    "    }",
-                    "",
-                    "    private static Path requiredPathVar(String var) {",
-                    "        return getEnv(var)",
-                    "            .map(Paths::get)",
-                    "            .orElseThrow(() -> new IllegalStateException(\"Environment variable \" + var + \" is not set or empty\"));",
+                    "            .filter(not(String::isEmpty))",
+                    "            .map(converter)",
+                    "            .orElseGet(() -> {",
+                    "                if (optional) {",
+                    "                    return defaultValue;",
+                    "                } else {",
+                    "                    throw new IllegalStateException(\"Environment variable \" + var + \" is not set or empty\");",
+                    "                }",
+                    "            });",
                     "    }",
                     "",
                     "    @SneakyThrows",
@@ -197,88 +67,32 @@ TaskProvider generateEnvironmentClass = tasks.register('generateEnvironmentClass
                     "        return new URL(string);",
                     "    }",
                     "",
-                    "    @Nullable",
-                    "    private static URL optionalUrlVar(String var) {",
-                    "        return getEnv(var)",
-                    "            .map(${classSimpleName}::parseUrl)",
-                    "            .orElse(null);",
-                    "    }",
-                    "",
-                    "    private static URL requiredUrlVar(String var) {",
-                    "        return getEnv(var)",
-                    "            .map(${classSimpleName}::parseUrl)",
-                    "            .orElseThrow(() -> new IllegalStateException(\"Environment variable \" + var + \" is not set or empty\"));",
-                    "    }",
-                    "",
-                    "    @Nullable",
-                    "    private static String optionalStringVar(String var) {",
-                    "        return getEnv(var)",
-                    "            .orElse(null);",
-                    "    }",
-                    "",
-                    "    private static String requiredStringVar(String var) {",
-                    "        return getEnv(var)",
-                    "            .orElseThrow(() -> new IllegalStateException(\"Environment variable \" + var + \" is not set or empty\"));",
-                    "    }",
-                    "",
                 ]
-                    + gitHubActionsEnvVars.entrySet().collect { entry ->
-                    List result = [
+                    + GITHUB_ACTIONS_ENV_VARS.collect { envVar ->
+                    String converter = "identity()"
+                    String defaultValue = "null"
+                    if (envVar.optionalType == Boolean) {
+                        converter = "Boolean::parseBoolean"
+                        defaultValue = "false"
+                    } else if (envVar.optionalType == Integer) {
+                        converter = "Integer::parseInt"
+                    } else if (envVar.optionalType == Long) {
+                        converter = "Long::parseLong"
+                    } else if (envVar.optionalType == Path) {
+                        converter = "Paths::get"
+                    } else if (envVar.optionalType == URL) {
+                        converter = "${classSimpleName}::parseUrl"
+                    }
+                    [
                         "",
                         "    /**",
-                        "     * ${entry.value.replace('\r', '').replace('\n', '\n     * ')}",
+                        "     * ${envVar.getDescHtml().replace('\n', '\n     * ')}",
                         "     */",
+                        envVar.optional && defaultValue == "null" ? "    @Nullable" : null,
+                        "    public static final ${envVar.type.name.replaceFirst(/^java\.lang\./, '')} ${envVar.name} = getEnv(\"${envVar.name}\", ${converter}, ${envVar.optional}, ${defaultValue});",
                     ]
-                    if (booleanEnvVars.contains(entry.key)) {
-                        result.add("    public static final boolean ${entry.key} = optionalBooleanVar(\"${entry.key}\");");
-                    } else if (integerEnvVars.contains(entry.key)) {
-                        if (optionalEnvVars.contains(entry.key)) {
-                            result.add("    @Nullable");
-                            result.add("    public static final Integer ${entry.key} = requiredIntegerVar(\"${entry.key}\");");
-                        } else {
-                            result.add("    public static final int ${entry.key} = requiredIntegerVar(\"${entry.key}\");");
-                        }
-                    } else if (longEnvVars.contains(entry.key)) {
-                        if (optionalEnvVars.contains(entry.key)) {
-                            result.add("    @Nullable");
-                            result.add("    public static final Long ${entry.key} = requiredLongVar(\"${entry.key}\");");
-                        } else {
-                            result.add("    public static final long ${entry.key} = requiredLongVar(\"${entry.key}\");");
-                        }
-                    } else if (pathEnvVars.contains(entry.key)) {
-                        if (optionalEnvVars.contains(entry.key)) {
-                            result.add("    @Nullable");
-                            result.add("    public static final Path ${entry.key} = optionalPathVar(\"${entry.key}\");");
-                        } else {
-                            result.add("    public static final Path ${entry.key} = requiredPathVar(\"${entry.key}\");");
-                        }
-                    } else if (urlEnvVars.contains(entry.key)) {
-                        if (optionalEnvVars.contains(entry.key)) {
-                            result.add("    @Nullable");
-                            result.add("    public static final URL ${entry.key} = requiredUrlVar(\"${entry.key}\");");
-                        } else {
-                            result.add("    public static final URL ${entry.key} = requiredUrlVar(\"${entry.key}\");");
-                        }
-                    } else {
-                        if (optionalEnvVars.contains(entry.key)) {
-                            result.add("    @Nullable");
-                            result.add("    public static final String ${entry.key} = optionalStringVar(\"${entry.key}\");");
-                        } else {
-                            result.add("    public static final String ${entry.key} = requiredStringVar(\"${entry.key}\");");
-                        }
-                    }
-                    return result.join('\n')
-                }
+                }.flatten().findAll { it != null }
                     + [
-                    "",
-                    "",
-                    "    /**",
-                    "     * All environment variable names that are set by GitHub Actions.",
-                    "     * See <a href=\"$gitHubActionsEnvVarDocLocation\">$gitHubActionsEnvVarDocLocation</a>.",
-                    "     */",
-                    "    public static final List<String> ALL_GITHUB_ACTION_ENVIRONMENT_VARIABLE_NAMES = List.of(",
-                    "        \"CI\"" + gitHubActionsEnvVars.keySet().collect { ",\n        \"$it\"" }.join(),
-                    "    );",
                     "",
                     "}",
                     "",
