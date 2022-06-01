@@ -30,6 +30,17 @@ jobs:
         java-version: 17
         distribution: zulu
         cache: gradle
+    - name: Cache Gradle build
+      uses: actions/cache@v3
+      with:
+        path: |
+          .gradle-build-cache
+        key: gradle-build-cache-${{runner.os}}-${{github.ref}}-${{github.head_ref}}-${{hashFiles('**/*.gradle*', '**/gradle-wrapper.properties')}}
+        restore-keys: |
+          gradle-build-cache-${{runner.os}}-${{github.ref}}-${{github.head_ref}}-
+          gradle-build-cache-${{runner.os}}-${{github.ref}}-
+          gradle-build-cache-${{runner.os}}-
     - name: Run
       run: |
+        set
         ./gradlew :actions:retrieve-repository-info:v1:run

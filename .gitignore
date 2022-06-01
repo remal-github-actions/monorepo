@@ -9,7 +9,7 @@ target/
 # Gradle:
 build/
 !**/src/**/build/
-build-cache/
+.gradle-build-cache/
 .gradle/
 
 # NodeJS

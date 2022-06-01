@@ -1,5 +1,3 @@
-import static org.gradle.wrapper.GradleUserHomeLookup.gradleUserHome
-
 rootProject.name = 'monorepo'
 
 include(
@@ -14,7 +12,7 @@ include(
 
 buildCache {
     local {
-        directory = new File(gradleUserHome(), 'caches/build-cache-remal-github-actions')
+        directory = new File(rootDir, '.gradle-build-cache')
         removeUnusedEntriesAfterDays = 7
     }
 }
