@@ -8,10 +8,10 @@ public class Main {
 
     @MainLifecycle
     public static void main() {
-        log.debug("debug\n1\n2");
-        log.info("info\n1\n2");
-        log.warn("warn\n1\n2");
-        log.error("error\n1\n2");
+        log.debug("debug\n1\n2", new RuntimeException());
+        log.info("info\n1\n2", new RuntimeException());
+        log.warn("warn\n1\n2", new RuntimeException());
+        log.error("error\n1\n2", new RuntimeException());
     }
 
 }

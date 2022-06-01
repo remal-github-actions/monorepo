@@ -9,6 +9,7 @@ import static org.apache.logging.log4j.spi.StandardLevel.WARN;
 
 import java.nio.charset.Charset;
 import java.util.regex.Pattern;
+import javax.annotation.Nullable;
 import lombok.val;
 import org.apache.logging.log4j.core.Core;
 import org.apache.logging.log4j.core.Layout;
@@ -53,7 +54,7 @@ class GitHubActionLogsLayout extends AbstractStringLayout {
             return formatGitHubActionMessage(message, "warning");
 
         } else if (intLevel <= INFO.intLevel()) {
-            return message + '\n';
+            return formatGitHubActionMessage(message, null);
 
         } else if (ACTIONS_STEP_DEBUG) {
             return formatGitHubActionMessage(message, "debug");
@@ -62,22 +63,20 @@ class GitHubActionLogsLayout extends AbstractStringLayout {
         return "";
     }
 
-    private static String formatGitHubActionMessage(String message, String command) {
+    private static String formatGitHubActionMessage(String message, @Nullable String command) {
         val sb = new StringBuilder();
 
+        if (command != null && !command.isEmpty()) {
+            sb.append("::").append(command).append("::");
+        }
+
         val lines = NEW_LINE.split(message);
-        sb.append("::").append(command).append("::").append(lines[0]);
+        sb.append(lines[0]);
 
         if (lines.length > 1) {
             for (int i = 1; i < lines.length; ++i) {
                 val line = lines[i];
-                sb.append("%0A");
-                if (command.equals("error")
-                    || command.equals("warning")
-                ) {
-                    sb.append('\t');
-                }
-                sb.append(line);
+                sb.append("%0A\t").append(line);
             }
         }
 
