@@ -63,6 +63,11 @@ TaskProvider generateEnvironmentClass = tasks.register('generateEnvironmentClass
                     "    }",
                     "",
                     "    @SneakyThrows",
+                    "    private static boolean parseBoolean(String string) {",
+                    "        return Boolean.parseBoolean(string) || \"1\".equals(string);",
+                    "    }",
+                    "",
+                    "    @SneakyThrows",
                     "    private static URL parseUrl(String string) {",
                     "        return new URL(string);",
                     "    }",
@@ -72,7 +77,7 @@ TaskProvider generateEnvironmentClass = tasks.register('generateEnvironmentClass
                     String converter = "identity()"
                     String defaultValue = "null"
                     if (envVar.optionalType == Boolean) {
-                        converter = "Boolean::parseBoolean"
+                        converter = "${classSimpleName}::parseBoolean"
                         defaultValue = "false"
                     } else if (envVar.optionalType == Integer) {
                         converter = "Integer::parseInt"
