@@ -8,6 +8,7 @@ public class Main {
 
     @MainLifecycle
     public static void main() {
+        log.debug("debug");
         log.info("info");
         log.warn("warn");
     }

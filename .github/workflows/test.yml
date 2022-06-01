@@ -12,6 +12,6 @@ jobs:
     timeout-minutes: 15
     steps:
     - run: |
-        echo ::debug::debug
-        echo ::warning::warning
+        echo "::debug::debug%0A1"
+        echo "::warning::warning%0A1"
         echo "::error::error%0A1"

@@ -9,6 +9,7 @@ import lombok.val;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.core.LoggerContext;
 import org.apache.logging.log4j.jul.Log4jBridgeHandler;
+import org.fusesource.jansi.AnsiConsole;
 
 @NoArgsConstructor(access = PRIVATE)
 public abstract class LoggingConfigurer {
@@ -29,6 +30,8 @@ public abstract class LoggingConfigurer {
 
         val loggerContext = (LoggerContext) LogManager.getContext();
         configureRemalGitHubActionsLogger(loggerContext);
+
+        AnsiConsole.systemInstall();
     }
 
     private static void configureRemalGitHubActionsLogger(LoggerContext loggerContext) {

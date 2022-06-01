@@ -20,6 +20,7 @@ List<String> dependencyConstraints = [
 
     'org.kohsuke:github-api:1.306',
     'com.google.guava:guava:31.1-jre',
+    'org.fusesource.jansi:jansi:2.4.0',
     'com.squareup:javapoet:1.13.0',
 
     'kr.motd.maven:os-maven-plugin:1.7.0',

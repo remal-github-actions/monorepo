@@ -17,6 +17,6 @@
     <Root level="WARN">
       <AppenderRef ref="Console"/>
     </Root>
-    <Logger name="name.remal.github_actions" level="INFO"/>
+    <Logger name="name.remal.github_actions" level="DEBUG"/>
   </Loggers>
 </Configuration>
