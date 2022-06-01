@@ -35,12 +35,13 @@ jobs:
       with:
         path: |
           .gradle-build-cache
-        key: gradle-build-cache-${{runner.os}}-${{github.ref}}-${{github.head_ref}}-${{hashFiles('**/*.gradle*', '**/gradle-wrapper.properties')}}
+        key: gradle-build-cache-${{runner.os}}-${{github.ref_type}}-${{github.ref}}-${{github.head_ref}}-${{hashFiles('**/*.gradle*', '**/gradle-wrapper.properties')}}
         restore-keys: |
-          gradle-build-cache-${{runner.os}}-${{github.ref}}-${{github.head_ref}}-
-          gradle-build-cache-${{runner.os}}-${{github.ref}}-
+          gradle-build-cache-${{runner.os}}-${{github.ref_type}}-${{github.ref}}-${{github.head_ref}}-
+          gradle-build-cache-${{runner.os}}-${{github.ref_type}}-${{github.ref}}-
           gradle-build-cache-${{runner.os}}-
+          gradle-build-cache-
     - name: Run
       run: |
-        set
+        echo ::notice::motice
         ./gradlew :actions:retrieve-repository-info:v1:run

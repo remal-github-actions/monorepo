@@ -8,5 +8,5 @@ dependencies {
     implementation 'org.apache.logging.log4j:log4j-jcl'
     implementation 'org.apache.logging.log4j:log4j-slf4j-impl'
     implementation 'org.apache.logging.log4j:log4j-jul'
-    implementation project(':common:utils')
+    implementation project(':common:core')
 }

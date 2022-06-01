@@ -7,6 +7,10 @@ plugins {
     id 'java-library'
 }
 
+dependencies {
+    implementation 'com.fasterxml.jackson.core:jackson-databind'
+}
+
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 TaskProvider generateEnvironmentClass = tasks.register('generateEnvironmentClass') { Task task ->

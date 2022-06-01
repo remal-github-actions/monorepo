@@ -4,8 +4,8 @@ plugins {
 
 dependencies {
     api 'org.kohsuke:github-api'
+    implementation project(':common:core')
     implementation project(':common:logging')
-    implementation project(':common:utils')
     implementation 'com.squareup.okhttp3:okhttp'
     implementation 'com.squareup.okhttp3:logging-interceptor'
 }
