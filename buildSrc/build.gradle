@@ -128,6 +128,7 @@ TaskProvider generateGitHubActionsEnvVarsClass = tasks.register('generateGitHubA
             'GITHUB_ACTION_PATH',
             'GITHUB_ACTION_REPOSITORY',
             'GITHUB_BASE_REF',
+            'GITHUB_HEAD_REF',
             'GITHUB_REF',
             'GITHUB_REF_NAME',
             'GITHUB_REF_TYPE',
