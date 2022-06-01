@@ -2,6 +2,7 @@ package name.remal.github_actions.common.logging;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static name.remal.github_actions.utils.Environment.GITHUB_ACTIONS;
+import static name.remal.github_actions.utils.Environment.RUNNER_DEBUG;
 import static org.apache.logging.log4j.spi.StandardLevel.ERROR;
 import static org.apache.logging.log4j.spi.StandardLevel.INFO;
 import static org.apache.logging.log4j.spi.StandardLevel.WARN;
@@ -25,7 +26,6 @@ class GitHubActionLogsLayout extends AbstractStringLayout {
 
     private static final Charset CHARSET = UTF_8;
     private static final Pattern NEW_LINE = Pattern.compile("\\r\\n|\\n\\r|\\r|\\n");
-    private static final boolean WRITE_DEBUG = true;
     private static final String DEFAULT_PATTERN = "%-5level: %logger - %msg%n";
 
     private final PatternLayout defaultLayout;
@@ -63,7 +63,7 @@ class GitHubActionLogsLayout extends AbstractStringLayout {
         } else if (intLevel <= INFO.intLevel()) {
             return formatGitHubActionMessage(event, null);
 
-        } else if (WRITE_DEBUG) {
+        } else if (RUNNER_DEBUG) {
             return formatGitHubActionMessage(event, "debug");
         }
 

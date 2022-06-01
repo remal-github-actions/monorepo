@@ -88,6 +88,7 @@ TaskProvider generateGitHubActionsEnvVarsClass = tasks.register('generateGitHubA
 
         //gitHubActionsEnvVars.put('ACTIONS_RUNNER_DEBUG', '<code>true</code> if runner diagnostic logging is enabled for this workflow run.')
         //gitHubActionsEnvVars.put('ACTIONS_STEP_DEBUG', '<code>true</code> if step debug logging is enabled for this workflow run.')
+        gitHubActionsEnvVars.put('RUNNER_DEBUG', '<code>true</code> if step debug logging is enabled for this workflow run.')
 
 
         Set<String> booleanEnvVars = [
@@ -96,6 +97,7 @@ TaskProvider generateGitHubActionsEnvVarsClass = tasks.register('generateGitHubA
             'ACTIONS_STEP_DEBUG',
             'GITHUB_ACTIONS',
             'GITHUB_REF_PROTECTED',
+            'RUNNER_DEBUG',
         ].toSet()
 
         Set<String> integerEnvVars = [
@@ -173,6 +175,7 @@ TaskProvider generateGitHubActionsEnvVarsClass = tasks.register('generateGitHubA
                         "            .descHtml(\"${entry.value.replace('\\', '\\\\').replace('"', '\\"').replace('\n', '\\n')}\")",
                         booleanEnvVars.contains(entry.key) ? "            .optionalType(Boolean.class)" : null,
                         integerEnvVars.contains(entry.key) ? "            .optionalType(Integer.class)" : null,
+                        longEnvVars.contains(entry.key) ? "            .optionalType(Long.class)" : null,
                         pathEnvVars.contains(entry.key) ? "            .optionalType(Path.class)" : null,
                         urlEnvVars.contains(entry.key) ? "            .optionalType(URL.class)" : null,
                         optionalEnvVars.contains(entry.key) ? "            .optional(true)" : null,
