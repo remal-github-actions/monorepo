@@ -71,7 +71,13 @@ class GitHubActionLogsLayout extends AbstractStringLayout {
         if (lines.length > 1) {
             for (int i = 1; i < lines.length; ++i) {
                 val line = lines[i];
-                sb.append("%0A\t").append(line);
+                sb.append("%0A");
+                if (command.equals("error")
+                    || command.equals("warning")
+                ) {
+                    sb.append('\t');
+                }
+                sb.append(line);
             }
         }
 

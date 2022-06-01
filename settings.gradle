@@ -15,7 +15,6 @@ include(
 buildCache {
     local {
         directory = new File(gradleUserHome(), 'caches/build-cache-remal-github-actions')
-        println directory
         removeUnusedEntriesAfterDays = 7
     }
 }
