@@ -4,11 +4,13 @@
   xsi:schemaLocation="http://logging.apache.org/log4j/2.0/config https://raw.githubusercontent.com/apache/logging-log4j2/master/log4j-core/src/main/resources/Log4j-config.xsd"
   xmlns="http://logging.apache.org/log4j/2.0/config"
   strict="true"
+  packages="name.remal.github_actions.common.logging"
 >
   <Appenders>
     <Console name="Console">
       <!--PatternLayout pattern="%d{YYYY-MM-dd HH:mm:ss.SSS} [%t] %-5level %logger - %msg%n"/-->
-      <PatternLayout pattern="%-5level: %logger - %msg%n"/>
+      <!--PatternLayout pattern="%-5level: %logger - %msg%n"/-->
+      <GitHubActionLayout/>
     </Console>
   </Appenders>
   <Loggers>

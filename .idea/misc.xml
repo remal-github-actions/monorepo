@@ -1,20 +1,21 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="EntryPointsManager">
-    <list size="4">
+    <list size="5">
       <item index="0" class="java.lang.String" itemvalue="com.google.auto.service.AutoService" />
       <item index="1" class="java.lang.String" itemvalue="name.remal.github_actions.common.lifecycle.MainLifecycle" />
       <item index="2" class="java.lang.String" itemvalue="name.remal.github_actions.common.lifecycle.PostMainLifecycle" />
       <item index="3" class="java.lang.String" itemvalue="name.remal.github_actions.common.lifecycle.PreMainLifecycle" />
+      <item index="4" class="java.lang.String" itemvalue="org.apache.logging.log4j.core.config.plugins.PluginFactory" />
     </list>
   </component>
   <component name="FrameworkDetectionExcludesConfiguration">
+    <type id="android" />
     <type id="hibernate" />
     <type id="javaeeApplication" />
     <type id="jpa" />
     <type id="Spring" />
     <type id="web" />
-    <type id="android" />
   </component>
   <component name="ProjectRootManager" version="2" languageLevel="JDK_17" default="true" project-jdk-name="17" project-jdk-type="JavaSDK" />
   <component name="ProjectType">

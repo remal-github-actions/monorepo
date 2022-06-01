@@ -9,7 +9,7 @@ public class Main {
     @MainLifecycle
     public static void main() {
         log.info("info");
-        log.warn("info");
+        log.warn("warn");
     }
 
 }

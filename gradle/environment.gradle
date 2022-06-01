@@ -77,9 +77,9 @@ allprojects {
             }
 
             ; [
-                'CI'                     : true,
+                //'CI'                     : true,
                 'GITHUB_ACTION'          : task.name,
-                'GITHUB_ACTIONS'         : true,
+                //'GITHUB_ACTIONS'         : true,
                 'GITHUB_ACTOR'           : 'remal-github-actions',
                 'GITHUB_API_URL'         : 'https://api.github.com',
                 'GITHUB_ENV'             : fileProvider('GITHUB_ENV'),
