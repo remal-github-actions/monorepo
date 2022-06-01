@@ -86,8 +86,8 @@ TaskProvider generateGitHubActionsEnvVarsClass = tasks.register('generateGitHubA
             }
         }
 
-        gitHubActionsEnvVars.put('ACTIONS_RUNNER_DEBUG', '<code>true</code> if runner diagnostic logging is enabled for this workflow run.')
-        gitHubActionsEnvVars.put('ACTIONS_STEP_DEBUG', '<code>true</code> if step debug logging is enabled for this workflow run.')
+        //gitHubActionsEnvVars.put('ACTIONS_RUNNER_DEBUG', '<code>true</code> if runner diagnostic logging is enabled for this workflow run.')
+        //gitHubActionsEnvVars.put('ACTIONS_STEP_DEBUG', '<code>true</code> if step debug logging is enabled for this workflow run.')
 
 
         Set<String> booleanEnvVars = [
