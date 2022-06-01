@@ -7,11 +7,11 @@ on:
   workflow_dispatch: { }
 
 jobs:
-  codeowners-validation:
+  test:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
     - run: |
         echo ::debug::debug
         echo ::warning::warning
-        echo "::error::error\n1"
+        echo "::error::error%0A1"
