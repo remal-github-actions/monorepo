@@ -29,12 +29,20 @@ class GitHubActionLogsLayout extends AbstractStringLayout {
     private static final Pattern NEW_LINE = Pattern.compile("\\r\\n|\\n\\r|\\r|\\n");
 
     private final PatternLayout defaultLayout;
+    private final PatternLayout exceptionsLayout;
 
     public GitHubActionLogsLayout(Configuration configuration) {
         super(configuration, CHARSET, null, null);
+
         this.defaultLayout = PatternLayout.newBuilder()
             .withConfiguration(configuration)
             .withPattern(DEFAULT_PATTERN)
+            .withCharset(CHARSET)
+            .build();
+
+        this.exceptionsLayout = PatternLayout.newBuilder()
+            .withConfiguration(configuration)
+            .withPattern("")
             .withCharset(CHARSET)
             .build();
     }
@@ -46,31 +54,43 @@ class GitHubActionLogsLayout extends AbstractStringLayout {
         }
 
         val intLevel = event.getLevel().getStandardLevel().intLevel();
-        val message = event.getMessage().getFormattedMessage();
         if (intLevel <= ERROR.intLevel()) {
-            return formatGitHubActionMessage(message, "error");
+            return formatGitHubActionMessage(event, "error");
 
         } else if (intLevel <= WARN.intLevel()) {
-            return formatGitHubActionMessage(message, "warning");
+            return formatGitHubActionMessage(event, "warning");
 
         } else if (intLevel <= INFO.intLevel()) {
-            return formatGitHubActionMessage(message, null);
+            return formatGitHubActionMessage(event, null);
 
         } else if (ACTIONS_STEP_DEBUG) {
-            return formatGitHubActionMessage(message, "debug");
+            return formatGitHubActionMessage(event, "debug");
         }
 
         return "";
     }
 
-    private static String formatGitHubActionMessage(String message, @Nullable String command) {
+    private String formatGitHubActionMessage(LogEvent event, @Nullable String command) {
         val sb = new StringBuilder();
 
         if (command != null && !command.isEmpty()) {
             sb.append("::").append(command).append("::");
         }
 
-        val lines = NEW_LINE.split(message);
+        val fullMessage = new StringBuilder();
+        fullMessage.append(event.getMessage().getFormattedMessage());
+        if (event.getThrown() != null) {
+            if (fullMessage.length() > 0) {
+                fullMessage.append('\n');
+            }
+            fullMessage.append(exceptionsLayout.toSerializable(event));
+        }
+
+        if (fullMessage.length() == 0) {
+            return "";
+        }
+
+        val lines = NEW_LINE.split(fullMessage.toString());
         sb.append(lines[0]);
 
         if (lines.length > 1) {
