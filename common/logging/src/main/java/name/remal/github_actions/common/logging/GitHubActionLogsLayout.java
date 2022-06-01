@@ -78,23 +78,28 @@ class GitHubActionLogsLayout extends AbstractStringLayout {
         val lines = NEW_LINE.split(message);
         sb.append("::").append(command).append("::");
 
-        if (color != null) {
-            sb.bg(color).append(lines[0]).reset();
-        } else {
-            sb.append(lines[0]);
-        }
+        if (lines.length == 1) {
+            sb.append(lines[0]).append('\n');
 
-        for (int i = 1; i < lines.length; ++i) {
-            val line = lines[i];
-            sb.append("%0A");
+        } else {
             if (color != null) {
-                sb.bg(color).append(line).reset();
+                sb.bg(color).append(lines[0]).reset();
             } else {
                 sb.append(lines[0]);
             }
+
+            for (int i = 1; i < lines.length; ++i) {
+                val line = lines[i];
+                sb.append("%0A");
+                if (color != null) {
+                    sb.bg(color).append(line).reset();
+                } else {
+                    sb.append(line);
+                }
+            }
         }
 
-        return sb.toString();
+        return sb.append('\n').toString();
     }
 
 
