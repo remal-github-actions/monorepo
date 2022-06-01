@@ -3,3 +3,12 @@ apply from: "${actionsRootProject.projectDir}/common.gradle"
 dependencies {
     annotationProcessorAll project(':common:lifecycle-processor')
 }
+
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
+apply plugin: 'application'
+
+application {
+    mainClass = 'lifecycle.MainLifecycle'
+    executableDir = project.projectDir
+}

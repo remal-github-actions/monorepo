@@ -6,8 +6,10 @@ import static name.remal.github_actions.utils.Environment.GITHUB_ACTIONS;
 import static org.apache.logging.log4j.spi.StandardLevel.ERROR;
 import static org.apache.logging.log4j.spi.StandardLevel.INFO;
 import static org.apache.logging.log4j.spi.StandardLevel.WARN;
+import static org.fusesource.jansi.Ansi.ansi;
 
 import java.nio.charset.Charset;
+import java.util.Map;
 import java.util.regex.Pattern;
 import lombok.val;
 import org.apache.logging.log4j.core.Core;
@@ -19,6 +21,7 @@ import org.apache.logging.log4j.core.config.plugins.PluginConfiguration;
 import org.apache.logging.log4j.core.config.plugins.PluginFactory;
 import org.apache.logging.log4j.core.layout.AbstractStringLayout;
 import org.apache.logging.log4j.core.layout.PatternLayout;
+import org.fusesource.jansi.Ansi.Color;
 
 @Plugin(name = "GitHubActionLayout", category = Core.CATEGORY_NAME, elementType = Layout.ELEMENT_TYPE)
 class GitHubActionLogsLayout extends AbstractStringLayout {
@@ -62,11 +65,34 @@ class GitHubActionLogsLayout extends AbstractStringLayout {
         return "";
     }
 
+    private static final Map<String, Color> COMMAND_COLOR = Map.of(
+        "error", Color.RED,
+        "warning", Color.YELLOW
+    );
+
     private static String formatGitHubActionMessage(String message, String command) {
-        val sb = new StringBuilder();
+        val sb = ansi();
+
+        val color = COMMAND_COLOR.get(command);
 
         val lines = NEW_LINE.split(message);
-        sb.append("::").append(command).append("::").append(lines[0]);
+        sb.append("::").append(command).append("::");
+
+        if (color != null) {
+            sb.bg(color).append(lines[0]).reset();
+        } else {
+            sb.append(lines[0]);
+        }
+
+        for (int i = 1; i < lines.length; ++i) {
+            val line = lines[i];
+            sb.append("%0A");
+            if (color != null) {
+                sb.bg(color).append(line).reset();
+            } else {
+                sb.append(lines[0]);
+            }
+        }
 
         return sb.toString();
     }
