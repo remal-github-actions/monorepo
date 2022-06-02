@@ -7,6 +7,7 @@ List<String> dependencyPlatforms = [
 ]
 
 String autoServiceVersion = '1.0.1'
+String hibernateValidatorVersion = '7.0.4.Final'
 
 List<String> dependencyConstraints = [
     'com.google.code.findbugs:jsr305:3.0.2',
@@ -19,6 +20,8 @@ List<String> dependencyConstraints = [
     "com.google.auto.service:auto-service-annotations:$autoServiceVersion",
 
     'org.kohsuke:github-api:1.306',
+    "org.hibernate.validator:hibernate-validator:$hibernateValidatorVersion",
+    "org.hibernate.validator:hibernate-validator-annotation-processor:$hibernateValidatorVersion",
     'com.google.guava:guava:31.1-jre',
     'com.squareup:javapoet:1.13.0',
 

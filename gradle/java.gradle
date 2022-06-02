@@ -54,6 +54,7 @@ allprojects {
         dependencies {
             compileOnlyAll 'com.google.auto.service:auto-service-annotations'
             annotationProcessorAll 'com.google.auto.service:auto-service'
+            annotationProcessorAll 'org.hibernate.validator:hibernate-validator-annotation-processor'
 
             testImplementation 'org.junit.jupiter:junit-jupiter-api'
             testImplementation 'org.junit.jupiter:junit-jupiter-params'
