@@ -11,10 +11,12 @@ public class Main {
     @MainLifecycle
     public static void main() {
         forLogGroup("group", () -> {
-            log.debug("debug\n1\n2", new RuntimeException());
-            log.info("info\n1\n2", new RuntimeException());
-            log.warn("warn\n1\n2", new RuntimeException());
-            log.error("error\n1\n2", new RuntimeException());
+            forLogGroup("inner group", () -> {
+                log.debug("debug\n1\n2", new RuntimeException());
+                log.info("info\n1\n2", new RuntimeException());
+                log.warn("warn\n1\n2", new RuntimeException());
+                log.error("error\n1\n2", new RuntimeException());
+            });
         });
     }
 
