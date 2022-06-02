@@ -1,63 +1,58 @@
 package name.remal.github_actions.utils;
 
+import static java.lang.Math.max;
 import static java.lang.System.lineSeparator;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.nio.file.Files.newBufferedWriter;
 import static java.util.Collections.emptyMap;
+import static java.util.UUID.randomUUID;
+import static javax.annotation.meta.When.UNKNOWN;
 import static lombok.AccessLevel.PRIVATE;
 import static name.remal.github_actions.utils.Environment.GITHUB_ENV;
 import static name.remal.github_actions.utils.Environment.GITHUB_PATH;
+import static name.remal.github_actions.utils.Environment.GITHUB_STEP_SUMMARY;
 import static name.remal.github_actions.utils.Json.JSON_MAPPER;
 
 import java.io.File;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Future;
 import java.util.function.Supplier;
+import java.util.regex.Pattern;
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.val;
+import org.intellij.lang.annotations.Language;
 
 @RequiredArgsConstructor(access = PRIVATE)
 public abstract class Commands {
 
-    public static void exportVariable(String name, @Nullable Object value) {
-        val message = new StringBuilder();
-        val delimiter = "_GitHubActionsFileCommandDelimeter_";
-        message.append(name).append("<<").append(delimiter).append(lineSeparator())
-            .append(toCommandValue(value)).append(lineSeparator())
-            .append(delimiter);
-
-        issueFileCommand(GITHUB_ENV, message);
+    @SuppressWarnings("java:S106")
+    public static synchronized void logInfo(@Nullable Object value) {
+        val valueString = ident(
+            value,
+            max(0, LOG_GROUPS.size() - 1),
+            max(0, LOG_GROUPS.size() - 1)
+        );
+        System.out.println(toSystemNewLines(valueString));
     }
 
-    /**
-     * See
-     * <a href="https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#masking-a-value-in-log">Masking a value in log</a>.
-     */
-    public static void addMask(String secret) {
-        issueCommand("add-mask", secret);
-    }
-
-    public static void addPath(File path) {
-        addPath(path.toPath());
-    }
-
-    public static void addPath(Path path) {
-        issueFileCommand(GITHUB_PATH, path);
-    }
 
     @Nullable
-    public static String getInput(String name) {
+    public static synchronized String getInput(String name) {
         return getInput(name, true);
     }
 
     @Nullable
-    public static String getInput(String name, boolean trimWhitespace) {
-        val endVar = "INPUT_" + name.replace(' ', '_').toUpperCase();
+    public static synchronized String getInput(String name, boolean trimWhitespace) {
+        name = name.replace(' ', '_').toUpperCase();
+        val endVar = "INPUT_" + name;
         var value = System.getenv(endVar);
 
         if (trimWhitespace && value != null) {
@@ -67,89 +62,259 @@ public abstract class Commands {
         return value;
     }
 
-    public static void setOutput(String name, @Nullable Object value) {
+
+    @Nullable
+    public static synchronized String getState(String name) {
+        name = name.replace(' ', '_').toUpperCase();
+        return System.getenv("INPUT_" + name);
+    }
+
+    /**
+     * See <a href="https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#sending-values-to-the-pre-and-post-actions">Sending values to the pre and post actions</a>.
+     */
+    public static synchronized void saveState(String name, @Nullable Object value) {
+        name = name.replace(' ', '_').toUpperCase();
         issueCommand("set-output", value, CommandProperties.fromMap("name", name));
     }
 
-    public static void debug(@Nullable Object value) {
-        issueCommand("debug", value);
+
+    /**
+     * See <a href="https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#setting-an-environment-variable">Setting an environment variable</a>.
+     */
+    public static synchronized void exportEnvVar(String name, @Nullable Object value) {
+        val message = new StringBuilder();
+        val delimiter = "__GitHubActionsFileCommandDelimiter_" + randomUUID() + "__";
+        message.append(name).append("<<").append(delimiter).append(lineSeparator())
+            .append(toCommandValue(value)).append(lineSeparator())
+            .append(delimiter);
+
+        issueFileCommand(GITHUB_ENV, message);
     }
 
-    public static void notice(@Nullable Object value) {
-        issueCommand("notice", value);
+
+    /**
+     * See <a href="https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#masking-a-value-in-log">Masking a value in log</a>.
+     */
+    public static synchronized void addMask(String secret) {
+        issueCommand("add-mask", secret);
     }
 
 
+    /**
+     * See <a href="https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#adding-a-system-path">Adding a system path</a>.
+     */
+    public static synchronized void addToPathEnvVar(File path) {
+        addToPathEnvVar(path.toPath());
+    }
+
+    /**
+     * See <a href="https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#adding-a-system-path">Adding a system path</a>.
+     */
+    public static synchronized void addToPathEnvVar(Path path) {
+        issueFileCommand(GITHUB_PATH, path);
+    }
+
+
+    /**
+     * See <a href="https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#adding-a-system-path">Adding a system path</a>.
+     */
+    public static synchronized void addStepSummary(@Nullable @Language("Markdown") String summary) {
+        addStepSummary((Object) summary);
+    }
+
+    /**
+     * See <a href="https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#adding-a-system-path">Adding a system path</a>.
+     */
+    public static synchronized void addStepSummary(@Nullable Object summary) {
+        issueFileCommand(GITHUB_STEP_SUMMARY, summary);
+    }
+
+
+    /**
+     * See <a href="https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#setting-an-output-parameter">Setting an output parameter</a>.
+     */
+    public static synchronized void setOutput(String name, @Nullable Object value) {
+        issueCommand("set-output", value, CommandProperties.fromMap("name", name));
+    }
+
+    /**
+     * See <a href="https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#setting-a-debug-message">Setting a debug message</a>.
+     */
+    public static synchronized void logDebug(@Nullable Object value) {
+        val valueString = ident(
+            value,
+            max(0, LOG_GROUPS.size() - 1),
+            max(0, LOG_GROUPS.size() - 1)
+        );
+        issueCommand("debug", valueString);
+    }
+
+
+    /**
+     * See <a href="https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#setting-a-notice-message">Setting a notice message</a>.
+     */
+    public static synchronized void logNotice(@Nullable Object value) {
+        logNotice(value, null);
+    }
+
+    /**
+     * See <a href="https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#setting-a-notice-message">Setting a notice message</a>.
+     */
+    public static synchronized void logNotice(
+        @Nullable Object value,
+        @Nullable AnnotationProperties properties
+    ) {
+        val valueString = ident(
+            value,
+            max(0, LOG_GROUPS.size() - 1),
+            max(1, LOG_GROUPS.size())
+        );
+        issueCommand("notice", valueString, properties);
+    }
+
+
+    /**
+     * See <a href="https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#setting-a-warning-message">Setting a warning message</a>.
+     */
+    public static synchronized void logWarning(@Nullable Object value) {
+        logWarning(value, null);
+    }
+
+    /**
+     * See <a href="https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#setting-a-warning-message">Setting a warning message</a>.
+     */
+    public static synchronized void logWarning(
+        @Nullable Object value,
+        @Nullable AnnotationProperties properties
+    ) {
+        val valueString = ident(
+            value,
+            max(0, LOG_GROUPS.size() - 1),
+            max(1, LOG_GROUPS.size())
+        );
+        issueCommand("warning", valueString, properties);
+    }
+
+
+    /**
+     * See <a href="https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#setting-an-error-message">Setting an error message</a>.
+     */
+    public static synchronized void logError(@Nullable Object value) {
+        logError(value, null);
+    }
+
+    /**
+     * See <a href="https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#setting-an-error-message">Setting an error message</a>.
+     */
+    public static synchronized void logError(
+        @Nullable Object value,
+        @Nullable AnnotationProperties properties
+    ) {
+        val valueString = ident(
+            value,
+            max(0, LOG_GROUPS.size() - 1),
+            max(1, LOG_GROUPS.size())
+        );
+        issueCommand("error", valueString, properties);
+    }
+
+
+    private static final List<String> LOG_GROUPS = new ArrayList<>();
+
+    /**
+     * See <a href="https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#grouping-log-lines">Grouping log lines</a>.
+     */
+    public static synchronized void forLogGroup(@Nullable Object title, VoidAction action) {
+        forLogGroup(title, (Action<Void>) () -> {
+            action.execute();
+            return null;
+        });
+    }
+
+    /**
+     * See <a href="https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#grouping-log-lines">Grouping log lines</a>.
+     */
+    @Nonnull(when = UNKNOWN)
     @SneakyThrows
-    private static void issueFileCommand(Path commandFile, @Nullable Object message) {
-        val stringMessage = toCommandValue(message);
-        if (stringMessage.isEmpty()) {
-            return;
+    public static synchronized <T> T forLogGroup(@Nullable Object title, Action<T> action) {
+        val titleString = toCommandValue(title);
+        if (titleString.isEmpty()) {
+            return action.execute();
         }
 
-        try (val writer = newBufferedWriter(commandFile, UTF_8)) {
-            writer.write(stringMessage);
-            writer.newLine();
+        LOG_GROUPS.add(titleString);
+        int logGroupsCount = LOG_GROUPS.size();
+
+        if (logGroupsCount == 1) {
+            issueCommand("group", titleString);
+        } else {
+            logInfo(titleString);
         }
-    }
+        try {
+            return action.execute();
 
-
-    private static void issueCommand(String command) {
-        issueCommand(command, null, null);
-    }
-
-    private static void issueCommand(String command, @Nullable Object message) {
-        issueCommand(command, message, null);
-    }
-
-    private static void issueCommand(String command, CommandProperties properties) {
-        issueCommand(command, null, properties);
-    }
-
-    @SuppressWarnings("java:S106")
-    private static void issueCommand(String command, @Nullable Object message, @Nullable CommandProperties properties) {
-        val sb = new StringBuilder();
-
-        sb.append("::").append(command);
-
-        val propertiesMap = Optional.ofNullable(properties)
-            .map(CommandProperties::asMap)
-            .orElse(emptyMap());
-        if (!propertiesMap.isEmpty()) {
-            sb.append(' ');
-            var isFirst = true;
-            for (val entry : propertiesMap.entrySet()) {
-                if (isFirst) {
-                    isFirst = false;
-                } else {
-                    sb.append(',');
-                }
-                sb.append(escapeProperty(entry.getKey())).append('=').append(escapeProperty(entry.getValue()));
+        } finally {
+            if (logGroupsCount == 1) {
+                issueCommand("endgroup");
             }
+            LOG_GROUPS.remove(LOG_GROUPS.size() - 1);
         }
-
-        sb.append("::").append(escapeData(message));
-
-        System.out.println(sb);
     }
 
 
-    private static String escapeData(@Nullable Object object) {
-        return toCommandValue(object)
-            .replace("%", "%25")
-            .replace("\r", "%0D")
-            .replace("\n", "%0A");
+    /**
+     * See <a href="https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#stopping-and-starting-workflow-commands">Stopping and starting workflow commands</a>.
+     */
+    public static synchronized void forDisabledWorkflowCommands(VoidAction action) {
+        forDisabledWorkflowCommands((Action<Void>) () -> {
+            action.execute();
+            return null;
+        });
     }
 
-    private static String escapeProperty(@Nullable Object object) {
-        return escapeData(object)
-            .replace(":", "%3A")
-            .replace(",", "%2C")
-            .replace("=", "%3D");
+    /**
+     * See <a href="https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#stopping-and-starting-workflow-commands">Stopping and starting workflow commands</a>.
+     */
+    @Nonnull(when = UNKNOWN)
+    @SneakyThrows
+    public static synchronized <T> T forDisabledWorkflowCommands(Action<T> action) {
+        val token = randomUUID().toString();
+        issueCommand("stop-commands", token);
+        try {
+            return action.execute();
+        } finally {
+            issueCommand(token);
+        }
     }
+
+
+    /**
+     * See <a href="https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#echoing-command-outputs">Echoing command outputs</a>.
+     */
+    public static synchronized void forEchoingWorkflowCommands(VoidAction action) {
+        forEchoingWorkflowCommands((Action<Void>) () -> {
+            action.execute();
+            return null;
+        });
+    }
+
+    /**
+     * See <a href="https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#echoing-command-outputs">Echoing command outputs</a>.
+     */
+    @Nonnull(when = UNKNOWN)
+    @SneakyThrows
+    public static synchronized <T> T forEchoingWorkflowCommands(Action<T> action) {
+        issueCommand("echo", "on");
+        try {
+            return action.execute();
+        } finally {
+            issueCommand("echo", "off");
+        }
+    }
+
 
     @SneakyThrows
-    private static String toCommandValue(@Nullable Object object) {
+    public static synchronized String toCommandValue(@Nullable Object object) {
         if (object instanceof Supplier<?> supplier) {
             object = supplier.get();
         } else if (object instanceof Callable<?> callable) {
@@ -176,15 +341,119 @@ public abstract class Commands {
             || object instanceof UUID
             || object instanceof Throwable
         ) {
-            return object.toString();
+            return object.toString().trim();
         }
 
         val tree = JSON_MAPPER.valueToTree(object);
         if (tree.isValueNode()) {
-            return tree.asText();
+            return tree.asText().trim();
         } else {
             return tree.toString();
         }
+    }
+
+
+    @SneakyThrows
+    private static void issueFileCommand(Path commandFile, @Nullable Object message) {
+        val stringMessage = toCommandValue(message);
+        if (stringMessage.isEmpty()) {
+            return;
+        }
+
+        try (val writer = newBufferedWriter(commandFile, UTF_8)) {
+            writer.write(stringMessage);
+            writer.newLine();
+        }
+    }
+
+    private static synchronized void issueCommand(String command) {
+        issueCommand(command, null, null);
+    }
+
+    private static synchronized void issueCommand(String command, @Nullable Object message) {
+        issueCommand(command, message, null);
+    }
+
+    @SuppressWarnings("java:S106")
+    private static synchronized void issueCommand(
+        String command,
+        @Nullable Object message,
+        @Nullable CommandProperties properties
+    ) {
+        val sb = new StringBuilder();
+
+        sb.append("::").append(command);
+
+        val propertiesMap = Optional.ofNullable(properties)
+            .map(CommandProperties::asMap)
+            .orElse(emptyMap());
+        if (!propertiesMap.isEmpty()) {
+            sb.append(' ');
+            var isFirst = true;
+            for (val entry : propertiesMap.entrySet()) {
+                if (isFirst) {
+                    isFirst = false;
+                } else {
+                    sb.append(',');
+                }
+                sb.append(escapeProperty(entry.getKey())).append('=').append(escapeProperty(entry.getValue()));
+            }
+        }
+
+        sb.append("::");
+
+        var messageString = toCommandValue(message);
+        if (!messageString.isEmpty()) {
+            messageString = toSystemNewLines(messageString);
+            messageString = escapeData(messageString);
+            sb.append(messageString);
+        }
+
+        System.out.println(sb);
+    }
+
+
+    private static String escapeData(@Nullable Object object) {
+        return toCommandValue(object)
+            .replace("%", "%25")
+            .replace("\r", "%0D")
+            .replace("\n", "%0A");
+    }
+
+    private static String escapeProperty(@Nullable Object object) {
+        return escapeData(object)
+            .replace(":", "%3A")
+            .replace(",", "%2C")
+            .replace("=", "%3D");
+    }
+
+
+    private static final String IDENT = "  ";
+    private static final Pattern NEW_LINE = Pattern.compile("\\r\\n|\\n\\r|\\r|\\n");
+    private static final String UNIX_NEW_LINE = "\n";
+
+    private static String ident(@Nullable Object message, int firstLineIdent, int otherLinesIdent) {
+        var stringMessage = toCommandValue(message);
+        if (stringMessage.isEmpty()) {
+            return "";
+        }
+
+        firstLineIdent = max(firstLineIdent, 0);
+        otherLinesIdent = max(otherLinesIdent, 0);
+
+        stringMessage = toUnixNewLines(stringMessage);
+        stringMessage = IDENT.repeat(firstLineIdent)
+            + stringMessage.replace(UNIX_NEW_LINE, IDENT.repeat(otherLinesIdent) + UNIX_NEW_LINE);
+        return stringMessage;
+    }
+
+    private static String toUnixNewLines(String string) {
+        return NEW_LINE.matcher(string).replaceAll(UNIX_NEW_LINE);
+    }
+
+    private static String toSystemNewLines(String string) {
+        return toUnixNewLines(string)
+            .replace(UNIX_NEW_LINE, lineSeparator());
     }
 
 }

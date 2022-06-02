@@ -43,5 +43,4 @@ jobs:
           gradle-build-cache-
     - name: Run
       run: |
-        echo ::notice::motice
         ./gradlew :actions:retrieve-repository-info:v1:run
