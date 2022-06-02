@@ -3,13 +3,14 @@ package name.remal.github_actions.retrieve_repository_info.v1;
 import static name.remal.github_actions.utils.Commands.forLogGroup;
 
 import lombok.extern.log4j.Log4j2;
+import lombok.val;
 import name.remal.github_actions.common.lifecycle.MainLifecycle;
 
 @Log4j2
 public class Main {
 
     @MainLifecycle
-    public static void main() {
+    public static void main() throws Throwable {
         forLogGroup("group", () -> {
             forLogGroup("inner group", () -> {
                 log.debug("debug\n1\n2", new RuntimeException());
@@ -18,6 +19,9 @@ public class Main {
                 log.error("error\n1\n2", new RuntimeException());
             });
         });
+        val thread = new Thread(() -> log.error("error"));
+        thread.run();
+        thread.join();
     }
 
 }

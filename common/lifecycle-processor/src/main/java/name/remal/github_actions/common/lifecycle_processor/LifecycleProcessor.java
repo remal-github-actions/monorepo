@@ -58,7 +58,8 @@ public class LifecycleProcessor extends AbstractProcessor {
             val mainMethodBuilder = methodBuilder("main")
                 .addModifiers(PUBLIC, STATIC)
                 .returns(void.class)
-                .addParameter(String[].class, "args");
+                .addParameter(String[].class, "args")
+                .addException(Throwable.class);
 
             val annotatedMethods = getAnnotatedLifecycleElements(annotationClass, roundEnv);
             for (val annotatedMethod : annotatedMethods) {

@@ -1,6 +1,5 @@
 package name.remal.github_actions.utils;
 
-import static java.lang.Math.max;
 import static java.lang.System.lineSeparator;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.nio.file.Files.newBufferedWriter;
@@ -15,12 +14,11 @@ import static name.remal.github_actions.utils.Json.JSON_MAPPER;
 
 import java.io.File;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Future;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
 import javax.annotation.Nonnull;
@@ -35,11 +33,7 @@ public abstract class Commands {
 
     @SuppressWarnings("java:S106")
     public static synchronized void logInfo(@Nullable Object value) {
-        val valueString = ident(
-            value,
-            max(0, LOG_GROUPS.size() - 1),
-            max(0, LOG_GROUPS.size() - 1)
-        );
+        val valueString = toCommandValue(value);
         System.out.println(toSystemNewLines(valueString));
     }
 
@@ -141,12 +135,7 @@ public abstract class Commands {
      * See <a href="https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#setting-a-debug-message">Setting a debug message</a>.
      */
     public static synchronized void logDebug(@Nullable Object value) {
-        val valueString = ident(
-            value,
-            max(0, LOG_GROUPS.size() - 1),
-            max(0, LOG_GROUPS.size() - 1)
-        );
-        issueCommand("debug", valueString);
+        issueCommand("debug", value);
     }
 
 
@@ -164,12 +153,7 @@ public abstract class Commands {
         @Nullable Object value,
         @Nullable AnnotationProperties properties
     ) {
-        val valueString = ident(
-            value,
-            max(0, LOG_GROUPS.size() - 1),
-            max(1, LOG_GROUPS.size())
-        );
-        issueCommand("notice", valueString, properties);
+        issueCommand("notice", value, properties);
     }
 
 
@@ -187,12 +171,7 @@ public abstract class Commands {
         @Nullable Object value,
         @Nullable AnnotationProperties properties
     ) {
-        val valueString = ident(
-            value,
-            max(0, LOG_GROUPS.size() - 1),
-            max(1, LOG_GROUPS.size())
-        );
-        issueCommand("warning", valueString, properties);
+        issueCommand("warning", value, properties);
     }
 
 
@@ -210,16 +189,9 @@ public abstract class Commands {
         @Nullable Object value,
         @Nullable AnnotationProperties properties
     ) {
-        val valueString = ident(
-            value,
-            max(0, LOG_GROUPS.size() - 1),
-            max(1, LOG_GROUPS.size())
-        );
-        issueCommand("error", valueString, properties);
+        issueCommand("error", value, properties);
     }
 
-
-    private static final List<String> LOG_GROUPS = new ArrayList<>();
 
     /**
      * See <a href="https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#grouping-log-lines">Grouping log lines</a>.
@@ -230,6 +202,8 @@ public abstract class Commands {
             return null;
         });
     }
+
+    private static final AtomicBoolean IS_IN_GROUP = new AtomicBoolean();
 
     /**
      * See <a href="https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#grouping-log-lines">Grouping log lines</a>.
@@ -242,22 +216,17 @@ public abstract class Commands {
             return action.execute();
         }
 
-        LOG_GROUPS.add(titleString);
-        int logGroupsCount = LOG_GROUPS.size();
-
-        if (logGroupsCount == 1) {
-            issueCommand("group", titleString);
-        } else {
-            logInfo(titleString);
+        if (!IS_IN_GROUP.compareAndSet(false, true)) {
+            return action.execute();
         }
+
+        issueCommand("group", titleString);
         try {
             return action.execute();
 
         } finally {
-            if (logGroupsCount == 1) {
-                issueCommand("endgroup");
-            }
-            LOG_GROUPS.remove(LOG_GROUPS.size() - 1);
+            issueCommand("endgroup");
+            IS_IN_GROUP.set(false);
         }
     }
 
@@ -428,24 +397,8 @@ public abstract class Commands {
     }
 
 
-    private static final String IDENT = "  ";
     private static final Pattern NEW_LINE = Pattern.compile("\\r\\n|\\n\\r|\\r|\\n");
     private static final String UNIX_NEW_LINE = "\n";
-
-    private static String ident(@Nullable Object message, int firstLineIdent, int otherLinesIdent) {
-        var stringMessage = toCommandValue(message);
-        if (stringMessage.isEmpty()) {
-            return "";
-        }
-
-        firstLineIdent = max(firstLineIdent, 0);
-        otherLinesIdent = max(otherLinesIdent, 0);
-
-        stringMessage = toUnixNewLines(stringMessage);
-        stringMessage = IDENT.repeat(firstLineIdent)
-            + stringMessage.replace(UNIX_NEW_LINE, IDENT.repeat(otherLinesIdent) + UNIX_NEW_LINE);
-        return stringMessage;
-    }
 
     private static String toUnixNewLines(String string) {
         return NEW_LINE.matcher(string).replaceAll(UNIX_NEW_LINE);

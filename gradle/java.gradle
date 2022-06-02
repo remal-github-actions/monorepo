@@ -102,18 +102,15 @@ allprojects {
 
         tasks.matching({ it instanceof HasCompileOptions }).configureEach { HasCompileOptions task ->
             task.options.with {
-                it.fork = false
                 it.encoding = 'UTF-8'
-                // Produce deprecation warnings:
+                it.debug = true
                 it.deprecation = true
                 it.compilerArgs.addAll(
                     [
                         // !!! DO NOT DISABLE THIS !!! Store parameter names into bytecode:
                         '-parameters',
 
-                        // Fail on any warning:
                         '-Werror',
-                        // Linting settings:
                         '-Xlint:all',
                         '-Xlint:-rawtypes',
                         '-Xlint:-serial',
