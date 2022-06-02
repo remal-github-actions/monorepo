@@ -19,7 +19,7 @@ public class Main {
                 log.error("error\n1\n2", new RuntimeException());
             });
         });
-        val thread = new Thread(() -> log.error("error"));
+        val thread = new Thread(() -> log.error("error", new RuntimeException()));
         thread.run();
         thread.join();
     }

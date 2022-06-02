@@ -217,13 +217,17 @@ public abstract class Commands {
         }
 
         if (!IS_IN_GROUP.compareAndSet(false, true)) {
-            return action.execute();
+            logInfo(titleString + ": start");
+            try {
+                return action.execute();
+            } finally {
+                logInfo(titleString + ": end");
+            }
         }
 
         issueCommand("group", titleString);
         try {
             return action.execute();
-
         } finally {
             issueCommand("endgroup");
             IS_IN_GROUP.set(false);
