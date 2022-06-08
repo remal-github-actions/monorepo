@@ -1,0 +1,9 @@
+plugins {
+    id 'java-library'
+}
+
+dependencies {
+    api project(':common:json')
+
+    implementation 'com.fasterxml.jackson.dataformat:jackson-dataformat-yaml'
+}

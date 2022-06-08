@@ -1,4 +1,4 @@
-package name.remal.github_actions.utils;
+package name.remal.github_actions.core;
 
 @FunctionalInterface
 public interface VoidAction {

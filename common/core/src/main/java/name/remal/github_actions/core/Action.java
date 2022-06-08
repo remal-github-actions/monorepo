@@ -1,4 +1,4 @@
-package name.remal.github_actions.utils;
+package name.remal.github_actions.core;
 
 import static javax.annotation.meta.When.UNKNOWN;
 

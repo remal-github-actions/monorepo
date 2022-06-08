@@ -22,6 +22,11 @@ allprojects {
             project.allSourceSetsModifiableConfigurations.add(conf)
         }
 
+        configurations.create('compileOnlyAllHidden') { Configuration conf ->
+            conf.description('Compile-only dependencies hidden from IDE for all source-sets')
+            project.allSourceSetsModifiableConfigurations.add(conf)
+        }
+
         configurations.create('optional') { Configuration conf ->
             sourceSets.configureEach { SourceSet sourceSet ->
                 conf.description('Optional dependencies')
@@ -52,9 +57,11 @@ allprojects {
         }
 
         dependencies {
+            compileOnlyAll 'com.fasterxml.jackson.core:jackson-annotations'
             compileOnlyAll 'com.google.auto.service:auto-service-annotations'
             annotationProcessorAll 'com.google.auto.service:auto-service'
             annotationProcessorAll 'org.hibernate.validator:hibernate-validator-annotation-processor'
+
 
             testImplementation 'org.junit.jupiter:junit-jupiter-api'
             testImplementation 'org.junit.jupiter:junit-jupiter-params'
@@ -62,6 +69,9 @@ allprojects {
             testImplementation 'org.mockito:mockito-inline'
 
             testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine'
+
+
+            compileOnlyAllHidden 'com.fasterxml.jackson.core:jackson-databind' // required for @lombok.Jacksonized
         }
 
         configurations.create('lombok') { Configuration conf ->
@@ -98,6 +108,13 @@ allprojects {
                     LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE,
                     objects.named(LibraryElements, LibraryElements.JAR)
                 )
+            }
+        }
+
+        tasks.withType(AbstractCompile) { AbstractCompile task ->
+            task.doFirst {
+                task.classpath += project.configurations.compileOnlyAllHidden
+                return true
             }
         }
 

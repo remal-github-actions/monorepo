@@ -1,4 +1,4 @@
 @NonNullByDefault
-package name.remal.github_actions.utils;
+package name.remal.github_actions.yaml;
 
 import name.remal.github_actions.common.annotations.NonNullByDefault;

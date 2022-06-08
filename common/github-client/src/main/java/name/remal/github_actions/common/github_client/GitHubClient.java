@@ -2,7 +2,7 @@ package name.remal.github_actions.common.github_client;
 
 import static java.nio.file.Files.createDirectories;
 import static lombok.AccessLevel.PRIVATE;
-import static name.remal.github_actions.utils.Environment.GITHUB_API_URL;
+import static name.remal.github_actions.core.Environment.GITHUB_API_URL;
 import static okhttp3.logging.HttpLoggingInterceptor.Level.BODY;
 import static org.kohsuke.github.authorization.AuthorizationProvider.ANONYMOUS;
 

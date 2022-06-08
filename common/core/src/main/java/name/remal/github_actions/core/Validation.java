@@ -1,4 +1,4 @@
-package name.remal.github_actions.utils;
+package name.remal.github_actions.core;
 
 import static jakarta.validation.Validation.buildDefaultValidatorFactory;
 import static lombok.AccessLevel.PRIVATE;

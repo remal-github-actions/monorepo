@@ -4,6 +4,7 @@ import org.jsoup.select.Elements
 
 buildscript {
     dependencies {
+        classpath 'de.undercouch:gradle-download-task:5.1.0'
         classpath 'org.jsoup:jsoup:1.15.1'
         classpath 'com.google.guava:guava:31.1-jre'
     }
@@ -13,21 +14,26 @@ buildscript {
     }
 }
 
-plugins {
-    id 'de.undercouch.download' version '5.1.0'
-}
-
 apply from: '../gradle/helpers.gradle'
 apply from: '../gradle/dependency-versions.gradle'
 apply from: '../gradle/java.gradle'
 apply from: '../gradle/checkstyle.gradle'
 
 dependencies {
+    api 'com.fasterxml.jackson.core:jackson-databind'
     api 'com.google.guava:guava'
     api 'kr.motd.maven:os-maven-plugin'
 }
 
+buildscript.configurations.classpath.allDependencies.all { Dependency dep ->
+    if ("${dep.group}:${dep.name}" == 'de.undercouch:gradle-download-task') {
+        project.configurations.api.dependencies.add(dep)
+    }
+}
+
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
+apply plugin: 'de.undercouch.download'
 
 String gitHubActionsEnvVarDocLocation = 'https://docs.github.com/en/actions/learn-github-actions/environment-variables'
 File gitHubActionsEnvVarDocFile = file("${project.buildDir}/downloaded/github/environment-variables.html")

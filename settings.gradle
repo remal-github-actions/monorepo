@@ -4,6 +4,8 @@ include(
     ':actions:retrieve-repository-info:v1',
     ':common:annotations',
     ':common:core',
+    ':common:json',
+    ':common:yaml',
     ':common:logging',
     ':common:lifecycle',
     ':common:lifecycle-processor',

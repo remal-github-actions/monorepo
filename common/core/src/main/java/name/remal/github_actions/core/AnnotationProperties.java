@@ -1,4 +1,4 @@
-package name.remal.github_actions.utils;
+package name.remal.github_actions.core;
 
 import javax.annotation.Nullable;
 import lombok.Builder;

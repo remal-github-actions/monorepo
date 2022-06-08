@@ -1,4 +1,4 @@
-package name.remal.github_actions.utils;
+package name.remal.github_actions.core;
 
 import static java.lang.System.lineSeparator;
 import static java.nio.charset.StandardCharsets.UTF_8;
@@ -7,10 +7,10 @@ import static java.util.Collections.emptyMap;
 import static java.util.UUID.randomUUID;
 import static javax.annotation.meta.When.UNKNOWN;
 import static lombok.AccessLevel.PRIVATE;
-import static name.remal.github_actions.utils.Environment.GITHUB_ENV;
-import static name.remal.github_actions.utils.Environment.GITHUB_PATH;
-import static name.remal.github_actions.utils.Environment.GITHUB_STEP_SUMMARY;
-import static name.remal.github_actions.utils.Json.JSON_MAPPER;
+import static name.remal.github_actions.core.Environment.GITHUB_ENV;
+import static name.remal.github_actions.core.Environment.GITHUB_PATH;
+import static name.remal.github_actions.core.Environment.GITHUB_STEP_SUMMARY;
+import static name.remal.github_actions.json.Json.JSON_MAPPER;
 
 import java.io.File;
 import java.nio.file.Path;

@@ -1,4 +1,4 @@
-package name.remal.github_actions.utils;
+package name.remal.github_actions.core;
 
 import static java.beans.Introspector.getBeanInfo;
 import static java.util.Collections.unmodifiableMap;
