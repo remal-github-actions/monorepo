@@ -12,7 +12,7 @@ String hibernateValidatorVersion = '7.0.4.Final'
 List<String> dependencyConstraints = [
     'com.google.code.findbugs:jsr305:3.0.2',
     'org.jetbrains:annotations:23.0.0',
-    'com.github.spotbugs:spotbugs-annotations:4.7.0',
+    'com.github.spotbugs:spotbugs-annotations:4.7.1',
     'com.infradna.tool:bridge-method-annotation:1.23',
 
     'org.projectlombok:lombok:1.18.24',
