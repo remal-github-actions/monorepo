@@ -4,7 +4,7 @@ import org.jsoup.select.Elements
 
 buildscript {
     dependencies {
-        classpath 'de.undercouch:gradle-download-task:5.1.0'
+        classpath 'de.undercouch:gradle-download-task:5.1.2'
         classpath 'org.jsoup:jsoup:1.15.1'
         classpath 'com.google.guava:guava:31.1-jre'
     }
