@@ -7,7 +7,7 @@ List<String> dependencyPlatforms = [
 ]
 
 String autoServiceVersion = '1.0.1'
-String hibernateValidatorVersion = '7.0.4.Final'
+String hibernateValidatorVersion = '7.0.5.Final'
 
 List<String> dependencyConstraints = [
     'com.google.code.findbugs:jsr305:3.0.2',
