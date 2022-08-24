@@ -11,7 +11,7 @@ allprojects {
         }
 
         dependencies {
-            checkstyle 'com.puppycrawl.tools:checkstyle:10.3'
+            checkstyle 'com.puppycrawl.tools:checkstyle:10.3.2'
         }
 
         checkstyle {
