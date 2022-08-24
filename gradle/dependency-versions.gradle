@@ -19,7 +19,7 @@ List<String> dependencyConstraints = [
     "com.google.auto.service:auto-service:$autoServiceVersion",
     "com.google.auto.service:auto-service-annotations:$autoServiceVersion",
 
-    'org.kohsuke:github-api:1.306',
+    'org.kohsuke:github-api:1.308',
     "org.hibernate.validator:hibernate-validator:$hibernateValidatorVersion",
     "org.hibernate.validator:hibernate-validator-annotation-processor:$hibernateValidatorVersion",
     'com.google.guava:guava:31.1-jre',
